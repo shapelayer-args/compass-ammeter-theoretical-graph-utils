@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나침반 전류계 — 그래프와 자기장 벡터</title>
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'svg']
+    },
+    chtml: { matchFontHeight: false }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #202733;
+    --muted: #687281;
+    --line: #e3e7ed;
+    --blue: #2563eb;
+    --green: #168565;
+    --orange: #ce690f;
+    --bg: #f7f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 1320px; margin: auto; padding: 28px 20px 48px; }
+  h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.6px; }
+  h2 { font-size: 18px; margin: 0; letter-spacing: -.4px; }
+  p { margin: 8px 0; }
+  .muted, small { color: var(--muted); }
+  .intro { max-width: 900px; font-size: 14px; }
+  .formula {
+    display: flex; flex-wrap: wrap; gap: 8px 24px;
+    margin: 18px 0 24px; font-size: 14px;
+  }
+  .formula span {
+    background: white; border: 1px solid var(--line);
+    padding: 8px 12px; border-radius: 8px;
+  }
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .card {
+    min-width: 0; background: white; border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px;
+  }
+  .top {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .tabs { display: flex; gap: 4px; padding: 3px; background: var(--bg); border-radius: 8px; }
+  button, input, select { font: inherit; }
+  button, select, input[type="number"] {
+    min-height: 42px; border: 1px solid var(--line); border-radius: 7px;
+    background: white; color: var(--ink); padding: 8px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: #f0f4fa; }
+  button:focus-visible, input:focus-visible, select:focus-visible, svg [tabindex]:focus-visible {
+    outline: 3px solid #93b4ff; outline-offset: 3px;
+  }
+  .tabs button { border: 0; background: transparent; min-height: 36px; font-size: 13px; }
+  .tabs button[aria-pressed="true"] {
+    background: white; color: var(--blue); box-shadow: 0 1px 4px #00000010;
+  }
+  .chart { width: 100%; display: block; overflow: hidden; }
+  #curve { aspect-ratio: 600 / 390; touch-action: pan-y; }
+  #vectors { aspect-ratio: 600 / 400; touch-action: none; user-select: none; }
+  .caption { min-height: 44px; font-size: 13px; color: var(--muted); }
+  .readout {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    background: var(--bg); border-radius: 8px; margin: 12px 0 16px;
+  }
+  .readout div { padding: 10px 8px; text-align: center; min-width: 0; }
+  .readout small { display: block; font-size: 11px; }
+  .readout strong { display: block; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+  .legend { display: flex; gap: 15px; flex-wrap: wrap; font-size: 12px; margin: 8px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 18px; height: 3px; display: inline-block; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 13px; }
+  .field input, .field select { width: 100%; min-width: 0; }
+  .wide { grid-column: 1 / -1; }
+  input[type="range"] { width: 100%; min-height: 36px; accent-color: var(--blue); margin: 0; }
+  .range-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+  .add-form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .add-form .field { flex: 1; min-width: 130px; }
+  .primary { background: var(--blue); border-color: var(--blue); color: white; }
+  .primary:hover { background: #1d4ed8; }
+  .table-wrap { overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 5px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { color: var(--muted); font-size: 12px; font-weight: 500; }
+  th:first-child, td:first-child { text-align: left; }
+  td button { min-height: 36px; font-size: 12px; padding: 5px 9px; }
+  .point-select { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .empty { color: var(--muted); text-align: center !important; padding: 20px; }
+  .footnote { font-size: 12px; margin-top: 20px; color: var(--muted); }
+  .status { font-size: 12px; color: #a33a22; min-height: 19px; margin: 6px 0 0; }
+  .reset { font-size: 12px; }
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; }
+    .card { max-width: 780px; width: 100%; margin: auto; }
+  }
+  @media (max-width: 480px) {
+    main { padding: 18px 10px 32px; }
+    h1 { font-size: 21px; }
+    .card { padding: 14px 10px; border-radius: 10px; }
+    .controls { gap: 10px; }
+    .readout strong { font-size: 14px; }
+    .formula { gap: 6px; }
+    .formula span { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>나침반 전류계</h1>
+  <p class="intro muted">
+    \(125\,\mathrm{mA}\)에서 \(\theta = 45^\circ\)인 측정값을 기준으로 합니다.
+    코일 자기장은 전류에 비례하고, 지구 자기장의 수평 성분과 서로 수직이라고 가정합니다.
+    \(\theta\)는 \(+y\) 방향에서 측정하며 오른쪽 회전을 양수로 정의합니다.
+  </p>
+  <div class="formula">
+    <span>\(r = \dfrac{B_{\mathrm{manual}}}{B_{\mathrm{Earth}}} = \dfrac{I}{125\,\mathrm{mA}}\)</span>
+    <span>\(\theta = \arctan(r)\)</span>
+    <span>\(\dfrac{\lvert\mathbf{B}_{\text{합}}\rvert}{B_{\mathrm{Earth}}} = \sqrt{1 + r^2}\)</span>
+  </div>
+
+  <div class="layout">
+    <section class="card" aria-labelledby="curve-title">
+      <div class="top">
+        <h2 id="curve-title">01 · 전류와 편향각</h2>
+        <div class="tabs" role="group" aria-label="가로축 선택">
+          <button type="button" data-axis="angle" aria-pressed="true">각도 θ</button>
+          <button type="button" data-axis="current" aria-pressed="false">전류 I</button>
+        </div>
+      </div>
+      <svg id="curve" class="chart" viewBox="0 0 600 390"
+        role="img" aria-labelledby="curve-svg-title curve-svg-desc">
+      </svg>
+      <p class="caption" id="curve-caption"></p>
+
+      <form id="add-form" class="add-form">
+        <label class="field">
+          추가할 전류 (mA)
+          <input id="new-current" type="number" value="100" step="any"
+            min="-1000000" max="1000000" required>
+        </label>
+        <button type="submit" class="primary">점 추가</button>
+        <button type="button" id="add-active">현재 값 추가</button>
+      </form>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>전류 · 선택</th><th>각도 θ</th><th>tan θ</th><th>관리</th></tr>
+          </thead>
+          <tbody id="point-list"></tbody>
+        </table>
+      </div>
+      <p class="muted" style="font-size:12px">
+        점 또는 표의 전류를 누르면 오른쪽 벡터에 반영됩니다.
+        테두리가 있는 원은 현재 조절 중인 값입니다.
+      </p>
+    </section>
+
+    <section class="card" aria-labelledby="vector-title">
+      <div class="top">
+        <h2 id="vector-title">02 · 자기장의 합과 θ</h2>
+        <button type="button" id="reset" class="reset">초기화</button>
+      </div>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--green)"></i>\(B_{\mathrm{Earth}}\)</span>
+        <span><i class="swatch" style="background:var(--blue)"></i>\(B_{\mathrm{manual}}\)</span>
+        <span><i class="swatch" style="background:var(--orange)"></i>\(\mathbf{B}_{\text{합}}\)</span>
+      </div>
+
+      <svg id="vectors" class="chart" viewBox="0 0 600 400"
+        aria-labelledby="vector-svg-title vector-svg-desc">
+      </svg>
+      <p class="caption">
+        파란색·주황색 끝점을 좌우로 드래그하세요.
+        지구 자기장은 \(+y\) 방향으로 고정되므로 합벡터의 \(y\) 성분은 항상 \(1\)입니다.
+        끝점에 키보드 초점을 두면 ← / → 키로도 조절할 수 있습니다.
+      </p>
+
+      <div class="readout" aria-live="off">
+        <div><small>전류 \(I\)</small><strong id="read-current"></strong></div>
+        <div><small>편향각 \(\theta\)</small><strong id="read-angle"></strong></div>
+        <div><small>\(\lvert\mathbf{B}_{\text{합}}\rvert / B_{\mathrm{Earth}}\)</small><strong id="read-total"></strong></div>
+      </div>
+
+      <div class="controls">
+        <label class="field">
+          전류 I (mA)
+          <input id="current" type="number" step="any" min="-1000000" max="1000000">
+        </label>
+        <label class="field">
+          편향각 θ (°)
+          <input id="angle" type="number" step="any">
+        </label>
+        <label class="field">
+          <span>\(B_{\mathrm{manual}} / B_{\mathrm{Earth}}\) · 부호 포함</span>
+          <input id="manual" type="number" step="any" min="-8000" max="8000">
+        </label>
+        <label class="field">
+          <span>\(\lvert\mathbf{B}_{\text{합}}\rvert / B_{\mathrm{Earth}}\) · 최소 1</span>
+          <input id="total" type="number" min="1" step="any">
+        </label>
+        <label class="field wide">
+          합벡터 크기를 변경할 때의 방향
+          <select id="direction">
+            <option value="1">+전류 · 오른쪽</option>
+            <option value="-1">−전류 · 왼쪽</option>
+          </select>
+        </label>
+        <div class="field wide">
+          <label for="current-slider">전류 연속 조절</label>
+          <input id="current-slider" type="range" min="-500" max="500" step="0.1">
+          <div class="range-labels">
+            <span id="slider-min">−500 mA</span>
+            <span>0</span>
+            <span id="slider-max">500 mA</span>
+          </div>
+        </div>
+      </div>
+      <p class="muted" style="font-size:12px">
+        벡터 그림은 값에 맞춰 자동 축척됩니다. 자기장의 단위는 B<sub>Earth</sub>이며,
+        실제 μT 값은 별도 측정 없이는 정해지지 않습니다.
+      </p>
+    </section>
+  </div>
+
+  <p class="footnote">
+    자기장은 원문의 E 대신 B로 표기했습니다. 음의 B<sub>manual</sub> 값은 크기가 아니라
+    x 방향 성분의 부호를 뜻합니다. 합벡터 크기만으로는 전류의 부호를 결정할 수 없어 방향을 별도로 선택합니다.
+    ±90°는 유한한 전류로 도달할 수 없는 극한이며, 이 화면의 수치 입력 범위는 ±1,000,000 mA입니다.
+    저장된 점과 현재 조절값은 구분되며, 드래그해도 저장된 점은 바뀌지 않습니다.
+  </p>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const CAL = 125;
+  const MAX_I = 1e6;
+  const MAX_R = MAX_I / CAL;
+  const DEG = 180 / Math.PI;
+  const MAX_ANGLE = Math.atan(MAX_R) * DEG;
+  const colors = ["#2563eb", "#168565", "#a855f7", "#dc6041", "#0891b2", "#b7791f"];
+  let nextId = 1;
+  let colorIndex = 0;
+  let points = [];
+  let current = 125;
+  let axisMode = "angle";
+  let preferredDirection = 1;
+  let sliderLimit = 500;
+  let drag = null;
+  let vectorGeometry = null;
+
+  const curve = $("curve");
+  const vectors = $("vectors");
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const ratio = i => i / CAL;
+  const theta = i => Math.atan(ratio(i)) * DEG;
+  const magnitude = i => Math.hypot(1, ratio(i));
+  const fmt = (v, digits = 2) => {
+    const rounded = Number(Number(v).toFixed(digits));
+    return rounded.toLocaleString("ko-KR", { maximumFractionDigits: digits });
+  };
+  const raw = (v, digits = 6) => String(Number(v.toFixed(digits)));
+  const esc = text => String(text).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+  const nearly = (a, b) => Math.abs(a - b) < 1e-7;
+  const nice = x => {
+    if (!(x > 0)) return 1;
+    const base = 10 ** Math.floor(Math.log10(x));
+    const n = x / base;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * base;
+  };
+
+  function status(message = "") {
+    $("status").textContent = message;
+  }
+
+  function makePoint(i) {
+    return { id: nextId++, i, color: colors[colorIndex++ % colors.length] };
+  }
+
+  function setCurrent(value, options = {}) {
+    if (!Number.isFinite(value)) return false;
+    const bounded = clamp(value, -MAX_I, MAX_I);
+    current = Math.abs(bounded) < 1e-9 ? 0 : bounded;
+    if (current !== 0) preferredDirection = Math.sign(current);
+    if (!options.keepSlider) sliderLimit = Math.min(MAX_I, Math.max(500, nice(Math.abs(current) * 1.15)));
+    render();
+    if (bounded !== value) status("표시 범위에 맞춰 전류를 ±1,000,000 mA 이내로 제한했습니다.");
+    else if (!options.keepStatus) status();
+    return true;
+  }
+
+  function addPoint(value) {
+    if (!Number.isFinite(value) || Math.abs(value) > MAX_I) {
+      status("−1,000,000 ~ 1,000,000 mA 범위의 숫자를 입력하세요.");
+      return;
+    }
+    if (points.some(p => nearly(p.i, value))) {
+      setCurrent(value);
+      status("이미 있는 전류 값입니다. 해당 값을 선택했습니다.");
+      return;
+    }
+    points.push(makePoint(value));
+    setCurrent(value);
+    renderList();
+    status(`${fmt(value)} mA 점을 추가했습니다.`);
+  }
+
+  function renderList() {
+    $("point-list").innerHTML = points.length
+      ? [...points].sort((a, b) => a.i - b.i).map(p => `
+        <tr>
+          <td>
+            <button type="button" class="point-select" data-select="${p.id}"
+              aria-label="${esc(fmt(p.i))} 밀리암페어 선택">
+              <span class="dot" style="background:${p.color}"></span>
+              ${esc(fmt(p.i))} mA
+            </button>
+          </td>
+          <td>${fmt(theta(p.i))}°</td>
+          <td>${fmt(ratio(p.i), 3)}</td>
+          <td><button type="button" data-remove="${p.id}"
+            aria-label="${esc(fmt(p.i))} 밀리암페어 점 삭제">삭제</button></td>
+        </tr>`).join("")
+      : '<tr><td class="empty" colspan="4">저장된 점이 없습니다. 새 전류 값을 추가하세요.</td></tr>';
+  }
+
+  function drawCurve() {
+    const L = 70, R = 574, T = 30, B = 326;
+    const W = R - L, H = B - T;
+    const extent = Math.max(2, ...points.map(p => Math.abs(ratio(p.i))), Math.abs(ratio(current)));
+    const yMax = nice(extent * 1.15);
+    const xMax = axisMode === "angle" ? 90 : yMax * CAL;
+    const x = v => L + (v + xMax) / (2 * xMax) * W;
+    const y = v => B - (v + yMax) / (2 * yMax) * H;
+    const displayX = i => axisMode === "angle" ? theta(i) : i;
+
+    let grid = "";
+    for (let k = -2; k <= 2; k++) {
+      const value = yMax * k / 2;
+      const py = y(value);
+      grid += `<line x1="${L}" y1="${py}" x2="${R}" y2="${py}" stroke="#e8ecf1"/>
+        <text x="${L - 10}" y="${py + 4}" text-anchor="end" font-size="12" fill="#687281">${fmt(value, 2)}</text>`;
+    }
+
+    const ticks = axisMode === "angle"
+      ? [-90, -60, -30, 0, 30, 60, 90]
+      : [-1, -.5, 0, .5, 1].map(t => t * xMax);
+
+    ticks.forEach(v => {
+      const px = x(v);
+      grid += `<line x1="${px}" y1="${T}" x2="${px}" y2="${B}"
+          stroke="#e8ecf1" ${Math.abs(v) === 90 && axisMode === "angle" ? 'stroke-dasharray="4 4"' : ""}/>
+        <text x="${px}" y="${B + 24}" text-anchor="middle" font-size="12" fill="#687281">
+          ${fmt(v)}${axisMode === "angle" ? "°" : ""}
+        </text>`;
+    });
+
+    // Sampling uniformly in angle and in field ratio preserves both the
+    // central curve and the steep near-asymptotic portions at large currents.
+    const samples = [];
+    if (axisMode === "angle") {
+      for (let n = 0; n <= 1200; n++) {
+        const a = -89.999999 + n / 1200 * 179.999998;
+        const r = Math.tan(a / DEG);
+        if (Math.abs(r) <= yMax) samples.push({ a, r });
+      }
+      for (let n = 0; n <= 800; n++) {
+        const r = -yMax + n / 800 * 2 * yMax;
+        samples.push({ a: Math.atan(r) * DEG, r });
+      }
+      samples.sort((a, b) => a.a - b.a);
+    }
+    const d = axisMode === "angle"
+      ? samples.map((p, index) => `${index ? "L" : "M"}${x(p.a).toFixed(3)},${y(p.r).toFixed(3)}`).join(" ")
+      : `M${x(-xMax)},${y(-yMax)} L${x(xMax)},${y(yMax)}`;
+
+    const activeX = x(displayX(current));
+    const activeY = y(ratio(current));
+
+    const markers = points.map((p, index) => {
+      const px = x(displayX(p.i)), py = y(ratio(p.i));
+      const putLeft = px > R - 100;
+      const dx = putLeft ? -11 : 11;
+      const labelY = clamp(py + (index % 2 === 0 ? -14 : 20), T + 13, B - 7);
+      return `<g data-point="${p.id}" tabindex="0" role="button"
+          aria-label="${esc(fmt(p.i))} 밀리암페어, ${esc(fmt(theta(p.i)))}도 선택"
+          style="cursor:pointer">
+          <title>${esc(fmt(p.i))} mA · ${esc(fmt(theta(p.i)))}°</title>
+          <circle cx="${px}" cy="${py}" r="18" fill="transparent"/>
+          <circle cx="${px}" cy="${py}" r="5" fill="${p.color}" stroke="white" stroke-width="2"/>
+          <text x="${px + dx}" y="${labelY}" text-anchor="${putLeft ? "end" : "start"}"
+            fill="${p.color}" font-size="12" font-weight="600"
+            paint-order="stroke" stroke="white" stroke-width="4">${esc(fmt(p.i))} mA</text>
+        </g>`;
+    }).join("");
+
+    curve.innerHTML = `
+      <title id="curve-svg-title">전류에 따른 나침반 편향각 그래프</title>
+      <desc id="curve-svg-desc">가로축은 ${axisMode === "angle" ? "각도" : "전류"}, 세로축은 코일 자기장과 지구 자기장의 비입니다.</desc>
+      <defs><clipPath id="plot-clip"><rect x="${L}" y="${T}" width="${W}" height="${H}"/></clipPath></defs>
+      ${grid}
+      <g clip-path="url(#plot-clip)">
+        <line x1="${L}" y1="${y(0)}" x2="${R}" y2="${y(0)}" stroke="#8993a1" stroke-width="1.3"/>
+        <line x1="${x(0)}" y1="${T}" x2="${x(0)}" y2="${B}" stroke="#8993a1" stroke-width="1.3"/>
+        <path d="${d}" fill="none" stroke="#34445a" stroke-width="2.3"/>
+        <path d="M${activeX},${y(0)} V${activeY} H${x(0)}"
+          fill="none" stroke="#ce690f" stroke-dasharray="4 4" opacity=".65"/>
+      </g>
+      ${markers}
+      <circle cx="${activeX}" cy="${activeY}" r="9" fill="none" stroke="#ce690f"
+        stroke-width="2.5" pointer-events="none"/>
+      <text x="${L}" y="17" fill="#687281" font-size="12">r = B_manual / B_Earth</text>
+      <text x="${(L + R) / 2}" y="376" text-anchor="middle" fill="#485466" font-size="13">
+        ${axisMode === "angle" ? "편향각 θ (°)" : "전류 I (mA)"}
+      </text>`;
+
+    $("curve-caption").textContent = axisMode === "angle"
+      ? "r = tan θ. 가로축은 전류가 아니라 각도입니다. ±90°의 점선은 점근선이며, 전류가 커질수록 각도 변화는 작아집니다."
+      : "r = I / 125 mA. 가로축을 전류로 바꾸면 직선입니다. 물리적 관계가 바뀌는 것이 아니라 가로축의 변수만 바뀝니다.";
+  }
+
+  function drawVectors() {
+    const r = ratio(current);
+    // Keep the coordinate transform fixed throughout a drag.
+    const scale = drag ? drag.scale : Math.min(180, 240 / Math.max(1.3, Math.abs(r) * 1.18));
+    const ox = 300, oy = 312;
+    const mx = ox + r * scale;
+    const ey = oy - scale;
+    vectorGeometry = { ox, oy, scale };
+
+    const arcRadius = 48;
+    const a = Math.atan(r);
+    const steps = Math.max(2, Math.ceil(Math.abs(a) * 28));
+    let arc = `M${ox},${oy - arcRadius}`;
+    for (let n = 1; n <= steps; n++) {
+      const t = a * n / steps;
+      arc += ` L${ox + arcRadius * Math.sin(t)},${oy - arcRadius * Math.cos(t)}`;
+    }
+    const textAngle = a / 2;
+    const labelX = ox + 76 * Math.sin(textAngle);
+    const labelY = oy - 76 * Math.cos(textAngle);
+    const endAnchor = r >= 0 ? "end" : "start";
+    const sideInset = r >= 0 ? -12 : 12;
+
+    const handle = (kind, cx, cy, color, name) => `
+      <g data-handle="${kind}" tabindex="0" role="slider"
+        aria-label="${name}" aria-orientation="horizontal"
+        aria-valuemin="${-MAX_I}" aria-valuemax="${MAX_I}" aria-valuenow="${raw(current)}"
+        aria-valuetext="${esc(fmt(current))} 밀리암페어, ${esc(fmt(theta(current)))}도"
+        style="cursor:ew-resize">
+        <title>${name} — 좌우 드래그 또는 방향키</title>
+        <circle cx="${cx}" cy="${cy}" r="25" fill="transparent"/>
+        <circle cx="${cx}" cy="${cy}" r="9" fill="white" stroke="${color}" stroke-width="3"/>
+        <circle cx="${cx}" cy="${cy}" r="3" fill="${color}"/>
+      </g>`;
+
+    const oldFocus = vectors.contains(document.activeElement)
+      ? document.activeElement.getAttribute("data-handle") : null;
+
+    vectors.innerHTML = `
+      <title id="vector-svg-title">지구 자기장, 코일 자기장, 합벡터</title>
+      <desc id="vector-svg-desc">
+        지구 자기장은 위쪽으로 1, 코일 자기장은 가로 방향으로 ${raw(r)}입니다.
+        두 드래그 손잡이로 전류를 조절할 수 있습니다.
+      </desc>
+      <defs>
+        <marker id="arrow-earth" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#168565"/>
+        </marker>
+        <marker id="arrow-manual" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#2563eb"/>
+        </marker>
+        <marker id="arrow-total" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#ce690f"/>
+        </marker>
+        <clipPath id="vector-clip"><rect x="8" y="20" width="584" height="364"/></clipPath>
+      </defs>
+      <line x1="24" y1="${oy}" x2="576" y2="${oy}" stroke="#dbe1e8"/>
+      <line x1="${ox}" y1="28" x2="${ox}" y2="366" stroke="#dbe1e8"/>
+      <text x="576" y="${oy + 22}" fill="#84909f" font-size="12" text-anchor="end">+x</text>
+      <text x="${ox + 12}" y="37" fill="#84909f" font-size="12">+y · 자북</text>
+      <g clip-path="url(#vector-clip)">
+        <path d="M${ox},${ey} H${mx} V${oy}" fill="none" stroke="#bdc6d2" stroke-dasharray="5 5"/>
+        <line x1="${ox}" y1="${oy}" x2="${ox}" y2="${ey}"
+          stroke="#168565" stroke-width="3" marker-end="url(#arrow-earth)"/>
+        ${Math.abs(r) > 1e-10 ? `
+          <line x1="${ox}" y1="${oy}" x2="${mx}" y2="${oy}"
+            stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-manual)"/>
+        ` : ""}
+        <line x1="${ox}" y1="${oy}" x2="${mx}" y2="${ey}"
+          stroke="#ce690f" stroke-width="3" marker-end="url(#arrow-total)"/>
+        <path d="${arc}" fill="none" stroke="#7a8492" stroke-width="1.5"/>
+        <circle cx="${ox}" cy="${oy}" r="3" fill="#465263"/>
+        ${handle("manual", mx, oy, "#2563eb", "调节 코일 자기장".replace("调节", "조절:"))}
+        ${handle("total", mx, ey, "#ce690f", "조절: 합벡터")}
+      </g>
+      <text x="${ox - 13}" y="${Math.max(66, ey - 14)}" text-anchor="end"
+        fill="#168565" font-size="13" paint-order="stroke" stroke="white" stroke-width="4">B_Earth = 1</text>
+      <text x="${clamp(mx + sideInset, 75, 525)}" y="${oy + 42}"
+        text-anchor="${endAnchor}" fill="#2563eb" font-size="13"
+        paint-order="stroke" stroke="white" stroke-width="4">B_manual = ${fmt(r, 3)}</text>
+      <text x="${clamp(mx + sideInset, 100, 500)}" y="${Math.max(55, ey - 19)}"
+        text-anchor="${endAnchor}" fill="#ce690f" font-size="13"
+        paint-order="stroke" stroke="white" stroke-width="4">|B_합| = ${fmt(magnitude(current), 3)}</text>
+      <text x="${labelX}" y="${labelY}" text-anchor="middle" fill="#485466" font-size="13"
+        paint-order="stroke" stroke="white" stroke-width="4">θ = ${fmt(theta(current))}°</text>
+      <text x="24" y="390" fill="#84909f" font-size="11">축척: B_Earth 1단위 = ${fmt(scale, 1)} px · 끝점 좌우 드래그</text>`;
+
+    if (oldFocus && !drag) {
+      vectors.querySelector(`[data-handle="${oldFocus}"]`)?.focus({ preventScroll: true });
+    }
+  }
+
+  function render() {
+    drawCurve();
+    drawVectors();
+    $("current").value = raw(current);
+    $("angle").value = raw(theta(current));
+    $("manual").value = raw(ratio(current));
+    $("total").value = raw(magnitude(current));
+    $("direction").value = String(preferredDirection);
+    $("read-current").textContent = `${fmt(current)} mA`;
+    $("read-angle").textContent = `${fmt(theta(current))}°`;
+    $("read-total").textContent = fmt(magnitude(current), 3);
+    const slider = $("current-slider");
+    slider.min = -sliderLimit;
+    slider.max = sliderLimit;
+    slider.step = Math.max(.1, sliderLimit / 50000);
+    slider.value = current;
+    $("slider-min").textContent = `${fmt(-sliderLimit)} mA`;
+    $("slider-max").textContent = `${fmt(sliderLimit)} mA`;
+  }
+
+  // Native number validation, with a numerical safety check for programmatic input.
+  function bindNumber(id, convert, valid, message) {
+    const input = $(id);
+    input.addEventListener("change", () => {
+      const value = input.valueAsNumber;
+      if (!Number.isFinite(value) || !valid(value)) {
+        status(message);
+        render();
+        return;
+      }
+      setCurrent(convert(value));
+    });
+  }
+
+  bindNumber("current", v => v, v => Math.abs(v) <= MAX_I,
+    "전류는 −1,000,000 ~ 1,000,000 mA 범위로 입력하세요.");
+  bindNumber("angle", v => CAL * Math.tan(v / DEG), v => Math.abs(v) <= MAX_ANGLE,
+    `각도는 약 ±${fmt(MAX_ANGLE, 5)}° 이내로 입력하세요. ±90°는 유한한 전류에 대응하지 않습니다.`);
+  bindNumber("manual", v => CAL * v, v => Math.abs(v) <= MAX_R,
+    "정규화한 코일 자기장은 −8,000 ~ 8,000 범위로 입력하세요.");
+  bindNumber("total", v => preferredDirection * CAL * Math.sqrt((v - 1) * (v + 1)),
+    v => v >= 1 && v <= Math.hypot(1, MAX_R),
+    "합벡터 크기는 1 이상이고, 전류 표시 범위에 해당하는 값이어야 합니다.");
+
+  $("direction").addEventListener("change", event => {
+    preferredDirection = Number(event.target.value);
+    setCurrent(preferredDirection * Math.abs(current));
+  });
+  $("current-slider").addEventListener("input", event => {
+    setCurrent(Number(event.target.value), { keepSlider: true });
+  });
+  $("add-form").addEventListener("submit", event => {
+    event.preventDefault();
+    addPoint($("new-current").valueAsNumber);
+  });
+  $("add-active").addEventListener("click", () => addPoint(current));
+
+  $("point-list").addEventListener("click", event => {
+    const select = event.target.closest("[data-select]");
+    const remove = event.target.closest("[data-remove]");
+    if (select) {
+      const p = points.find(p => p.id === Number(select.dataset.select));
+      if (p) setCurrent(p.i);
+    }
+    if (remove) {
+      points = points.filter(p => p.id !== Number(remove.dataset.remove));
+      renderList();
+      render();
+      status("점을 삭제했습니다. 현재 조절값은 유지됩니다.");
+    }
+  });
+
+  document.querySelectorAll("[data-axis]").forEach(button => {
+    button.addEventListener("click", () => {
+      axisMode = button.dataset.axis;
+      document.querySelectorAll("[data-axis]").forEach(b => {
+        b.setAttribute("aria-pressed", String(b === button));
+      });
+      drawCurve();
+    });
+  });
+
+  function selectCurvePoint(event) {
+    const target = event.target.closest("[data-point]");
+    if (!target) return;
+    const p = points.find(p => p.id === Number(target.dataset.point));
+    if (p) setCurrent(p.i);
+  }
+  curve.addEventListener("click", selectCurvePoint);
+  curve.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectCurvePoint(event);
+    }
+  });
+
+  function svgPosition(event) {
+    const matrix = vectors.getScreenCTM();
+    if (!matrix) return null;
+    const point = vectors.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    return point.matrixTransform(matrix.inverse());
+  }
+
+  vectors.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || drag) return;
+    const handle = event.target.closest("[data-handle]");
+    if (!handle) return;
+    const pos = svgPosition(event);
+    if (!pos) return;
+    event.preventDefault();
+    const { ox, scale } = vectorGeometry;
+    drag = {
+      pointerId: event.pointerId,
+      scale,
+      ox,
+      // Preserve the finger-to-endpoint offset to avoid a jump on touch.
+      offsetX: pos.x - (ox + ratio(current) * scale)
+    };
+    vectors.setPointerCapture(event.pointerId);
+  });
+
+  vectors.addEventListener("pointermove", event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const pos = svgPosition(event);
+    if (!pos) return;
+    event.preventDefault();
+    // Both endpoints change only their horizontal component:
+    // B_total = (r, 1), B_manual = (r, 0).
+    const value = CAL * (pos.x - drag.ox - drag.offsetX) / drag.scale;
+    setCurrent(value, { keepSlider: false });
+  });
+
+  function finishDrag(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const id = drag.pointerId;
+    drag = null;
+    if (vectors.hasPointerCapture(id)) vectors.releasePointerCapture(id);
+    render();
+  }
+  vectors.addEventListener("pointerup", finishDrag);
+  vectors.addEventListener("pointercancel", finishDrag);
+  vectors.addEventListener("lostpointercapture", event => {
+    if (drag && event.pointerId === drag.pointerId) {
+      drag = null;
+      render();
+    }
+  });
+
+  vectors.addEventListener("keydown", event => {
+    if (!event.target.closest("[data-handle]")) return;
+    const step = event.shiftKey ? 25 : 1;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      setCurrent(current + (event.key === "ArrowRight" ? step : -step));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setCurrent(0);
+    }
+  });
+
+  function reset() {
+    nextId = 1;
+    colorIndex = 0;
+    points = [100, 125, 250].map(makePoint);
+    preferredDirection = 1;
+    sliderLimit = 500;
+    $("new-current").value = "100";
+    setCurrent(125);
+    renderList();
+    status();
+  }
+  $("reset").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>
