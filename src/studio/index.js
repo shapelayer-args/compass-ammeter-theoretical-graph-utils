@@ -1,3 +1,5 @@
+import { installFiles } from "./files.js";
+import { PROJECT_FORMAT, PROJECT_VERSION } from "./project.js";
 import { createTimelineView } from "./timeline-view.js";
 import { clamp, esc } from "../utils.js";
 import { installPanels } from "./panels.js";
@@ -223,15 +225,6 @@ export function installStudio(api) {
     pause();const point=frame.state.points.find(p=>p.id===Number(input.dataset.keyPoint));if(point)point.i=value;
     playhead=frame.time;api.apply(clone(frame.state),rangeAt(playhead));timeline();
   });
-  $('keyframe-demo').addEventListener('click', () => {
-    pause();const state=api.capture(),start=frames.length?duration()+2:0;
-    if(frames.length>117||start+4>300){message('animation-status','예시를 추가할 공간이 없습니다.');return;}
-    for(const [offset,factor,earth] of [[0,1,1],[2,2,1.5],[4,-1,.75]]) {
-      const id=nextId++;
-      frames.push({id,name:`예시 ${offset/2+1}`,time:start+offset,state:{current:125*factor,earth,points:state.points.map(p=>({...p,i:clamp(p.i*factor,-1e6,1e6)}))}});
-    }
-    select(frames.at(-3).id);message('animation-status','4초 분량의 예시를 추가했습니다. 재생하거나 값을 편집해 보세요.');
-  });
   // Manual interaction takes over immediately; authoring never fights playback.
   for(const type of ['pointerdown','keydown','input','change']) {
     document.addEventListener(type,event=>{
@@ -243,6 +236,26 @@ export function installStudio(api) {
   const { videoMime } = installExport({ api, $, stage, pause, message, seek, duration, clock,
     getFrames: () => frames, getPlayhead: () => playhead, setPlayhead: value => { playhead = value; },
     getExporting: () => exporting, setExporting: value => { exporting = value; } });
+  installFiles({ $, isBusy: () => !!exporting,
+    capture: name => ({
+      format: PROJECT_FORMAT, version: PROJECT_VERSION, name,
+      state: api.capture(), frames: clone(frames), playhead,
+      settings: { ...api.captureSettings(), easing: $('animation-easing').value, loop: $('animation-loop').checked }
+    }),
+    open(project) {
+      pause(); keyDrag = null; rulerDrag = null;
+      frames = clone(project.frames); selected = null;
+      nextId = Math.max(0, ...frames.map(frame => frame.id)) + 1;
+      playhead = project.playhead;
+      $('animation-easing').value = project.settings.easing;
+      $('animation-loop').checked = project.settings.loop;
+      api.applySettings(project.settings);
+      api.apply(project.state, null);
+      api.reservePointIds(frames);
+      timeline();
+      message('animation-status', `${project.name} · ${api.fmt(duration(),2)}초`);
+    }
+  });
   api.onPointsChange(reason => {
     if (exporting) return;
     pause();

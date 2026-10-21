@@ -333,7 +333,7 @@ export function createGraphController() {
     status();
     notifyPoints("reset");
   }
-  installPresentation({ $, getTheater: () => theater, setTheater });
+  const presentation = installPresentation({ $, getTheater: () => theater, setTheater });
   document.querySelectorAll("[data-current]").forEach(button => button.addEventListener("click", () => setCurrent(Number(button.dataset.current))));
   function curvePosition(event) {
     const matrix = curve.getScreenCTM();
@@ -424,6 +424,17 @@ export function createGraphController() {
   $("reset").addEventListener("click", reset);
   reset();
   return {
+    captureSettings: () => ({ axisMode, theme: presentation.getTheme() }),
+    applySettings(settings) {
+      axisMode = settings.axisMode;
+      document.querySelectorAll('[data-axis]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.axis === axisMode));
+      });
+      presentation.setTheme(settings.theme);
+    },
+    reservePointIds(savedFrames) {
+      for (const frame of savedFrames) for (const point of frame.state.points) nextId = Math.max(nextId, point.id + 1);
+    },
     onPointsChange(listener) {
       pointListeners.add(listener);
       return () => pointListeners.delete(listener);

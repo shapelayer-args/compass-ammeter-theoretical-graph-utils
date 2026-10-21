@@ -1,0 +1,22 @@
+.app-menubar{gap:3px}
+.app-menubar>button[aria-expanded=true]{background:var(--accent);color:var(--accent-ink)}
+.app-menu{position:fixed;inset:auto;margin:0;padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--ink);box-shadow:0 12px 40px #0002;max-height:calc(100dvh - 65px);overflow-y:auto;overscroll-behavior:contain;width:min(340px,calc(100vw - 16px));font-size:12px}
+.app-menu::backdrop{background:transparent}
+.app-menu .menu-title{font-size:14px;font-weight:650;margin:0 0 12px}
+.app-menu .field{font-size:11px}
+.app-menu .field input,.app-menu .field select{font-size:12px;padding:8px 10px;min-height:36px}
+.app-menu h3{font-size:12px;margin:0}
+.app-menu .wide-button{width:100%;font-size:12px;min-height:36px;margin-top:0}
+.app-menu .panel-status{font-size:11px;margin-bottom:0}
+.app-menu .section-heading{margin-bottom:0}
+.view-menu{width:min(240px,calc(100vw - 16px));padding:12px}
+.view-menu .menu-title{padding:3px 8px;margin-bottom:8px}
+.view-menu fieldset{display:grid;gap:4px}
+.view-menu button{width:100%;text-align:left;border-radius:12px;padding:9px 10px;min-height:36px;font-size:12px;background:transparent}
+.view-menu button:hover{background:var(--control);transform:none}
+.view-menu button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.view-menu button[aria-controls][aria-expanded]::after{content:'숨김';float:right;color:var(--muted);font-size:10px}
+.view-menu button[aria-controls][aria-expanded=true]::after{content:'표시';color:var(--curve)}
+.menu-label{font-size:10px;color:var(--muted);margin:3px 8px}
+.menu-divider{height:1px;background:var(--line);margin:7px 4px}
+@media print{.app-menu{display:none!important}}

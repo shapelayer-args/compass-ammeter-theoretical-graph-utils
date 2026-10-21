@@ -73,7 +73,7 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
   $('video-support').textContent=videoMime?`1080p · 30 fps · ${videoExtension.toUpperCase()}\n키프레임 2개 이상이 필요합니다. 전체 타임라인을 화면과 같은 속도로 녹화합니다.`:'이 브라우저는 영상 저장을 지원하지 않습니다. PNG·SVG 이미지 저장은 사용할 수 있습니다.';
   function exportLock(locked) {
     stage.inert=locked;
-    $('animation-controls').disabled=locked;$('keyframe-inspector-controls').disabled=locked;$('timeline-scroll').inert=locked;$('timeline-splitter').inert=locked;$('export-settings').disabled=locked;
+    $('view-settings').disabled=locked;$('file-settings').disabled=locked;$('animation-controls').disabled=locked;$('keyframe-inspector-controls').disabled=locked;$('timeline-scroll').inert=locked;$('timeline-splitter').inert=locked;$('export-settings').disabled=locked;
     document.querySelectorAll('[data-panel-tab], .header-actions button, #reset, #add-active, #help-open').forEach(button=>{button.disabled=locked;});
     $('panel-close').disabled=locked;$('panel-splitter').inert=locked;
     $('export-progress').hidden=!locked;$('export-cancel').hidden=!locked;

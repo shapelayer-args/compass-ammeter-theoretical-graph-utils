@@ -26,4 +26,13 @@ export function installPresentation({ $, getTheater, setTheater }) {
   });
   $("help-open").addEventListener("click", () => $("help").showModal());
   $("help-close").addEventListener("click", () => $("help").close());
+  return {
+    getTheme: () => themeMode,
+    setTheme(mode) {
+      if (!['system', 'light', 'dark'].includes(mode)) return;
+      themeMode = mode;
+      try { localStorage.setItem('field-theme', mode); } catch {}
+      applyTheme();
+    }
+  };
 }
