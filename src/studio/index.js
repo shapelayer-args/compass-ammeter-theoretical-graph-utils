@@ -21,7 +21,7 @@ export function installStudio(api) {
   const { panelTab } = installPanels({ $, panel });
   try { frames = validateFrames(JSON.parse(localStorage.getItem(STORAGE) || '[]')); nextId = frames.length + 1; } catch { frames = []; }
   function save() {
-    try { localStorage.setItem(STORAGE, JSON.stringify(frames)); } catch {}
+    try { localStorage.setItem(api.captureSettings().workspace==='coil'?'field-lab-coil-keyframes-v1':STORAGE, JSON.stringify(frames)); } catch {}
   }
   const { stateAt, rangeAt } = createAnimationModel({ api, getFrames: () => frames, getEasing: () => $('animation-easing').value, duration });
   let timelineZoom = 1;
@@ -99,6 +99,8 @@ export function installStudio(api) {
     if (!frame) return;
     $('keyframe-name').value=frame.name; $('keyframe-time').value=frame.time;
     $('keyframe-current').value=Number(frame.state.current.toFixed(6)); $('keyframe-earth').value=Number(frame.state.earth.toFixed(6));
+    $('keyframe-compass-field').hidden=api.captureSettings().workspace!=='coil';
+    $('keyframe-compass').value=frame.state.compassX??0;
     $('keyframe-points').innerHTML=frame.state.points.map(p=>`<label class="field"><span>점 ${p.id} · mA</span><input type="number" step="any" min="-1000000" max="1000000" data-key-point="${p.id}" value="${Number(p.i.toFixed(6))}" aria-label="점 ${p.id}의 전류"></label>`).join('') || '<p class="panel-note">이 키프레임에는 저장한 점이 없습니다.</p>';
   }
   function timeline() {
@@ -217,6 +219,7 @@ export function installStudio(api) {
   editFrame('keyframe-name',e=>e.value,v=>v.trim().length>0,(f,v)=>{f.name=v.slice(0,40);});
   editFrame('keyframe-time',e=>e.valueAsNumber,(v,f)=>Number.isFinite(v)&&v>=0&&v<=300&&!frames.some(o=>o.id!==f.id&&o.time===v),(f,v)=>{f.time=v;frames.sort((a,b)=>a.time-b.time);});
   editFrame('keyframe-current',e=>e.valueAsNumber,v=>Number.isFinite(v)&&Math.abs(v)<=1e6,(f,v)=>{f.state.current=v;});
+  editFrame('keyframe-compass',e=>e.valueAsNumber,v=>Number.isFinite(v)&&Math.abs(v)<=3,(f,v)=>{f.state.compassX=v;});
   editFrame('keyframe-earth',e=>e.valueAsNumber,v=>Number.isFinite(v)&&v>=.05&&v<=100,(f,v)=>{f.state.earth=v;});
   $('keyframe-points').addEventListener('change', event => {
     const input=event.target.closest('[data-key-point]'),frame=selectedFrame();if(!input||!frame)return;
@@ -229,6 +232,7 @@ export function installStudio(api) {
   for(const type of ['pointerdown','keydown','input','change']) {
     document.addEventListener(type,event=>{
       if(exporting)return;
+      if(event.target.closest('.coil-controls')) { if(!event.target.closest('.coil-layers, #coil-retrace'))pause(); return; }
       if(event.target.closest('.graph-stage, #panel-controls, #reset, [data-axis]')) pause(true);
     },true);
   }
@@ -236,26 +240,23 @@ export function installStudio(api) {
   const { videoMime } = installExport({ api, $, stage, pause, message, seek, duration, clock,
     getFrames: () => frames, getPlayhead: () => playhead, setPlayhead: value => { playhead = value; },
     getExporting: () => exporting, setExporting: value => { exporting = value; } });
-  installFiles({ $, isBusy: () => !!exporting,
-    capture: name => ({
-      format: PROJECT_FORMAT, version: PROJECT_VERSION, name,
+  function captureProject(name) {
+    return {format: PROJECT_FORMAT, version: PROJECT_VERSION, name,
       state: api.capture(), frames: clone(frames), playhead,
-      settings: { ...api.captureSettings(), easing: $('animation-easing').value, loop: $('animation-loop').checked }
-    }),
-    open(project) {
-      pause(); keyDrag = null; rulerDrag = null;
-      frames = clone(project.frames); selected = null;
-      nextId = Math.max(0, ...frames.map(frame => frame.id)) + 1;
-      playhead = project.playhead;
-      $('animation-easing').value = project.settings.easing;
-      $('animation-loop').checked = project.settings.loop;
-      api.applySettings(project.settings);
-      api.apply(project.state, null);
-      api.reservePointIds(frames);
-      timeline();
-      message('animation-status', `${project.name} · ${api.fmt(duration(),2)}초`);
-    }
-  });
+      settings: { ...api.captureSettings(), easing: $('animation-easing').value, loop: $('animation-loop').checked }};
+  }
+  function openProject(project) {
+    pause(); keyDrag = null; rulerDrag = null;
+    frames = clone(project.frames); selected = null;
+    nextId = Math.max(0, ...frames.map(frame => frame.id)) + 1;
+    playhead = project.playhead;
+    $('project-name').value=project.name;
+    $('animation-easing').value = project.settings.easing;
+    $('animation-loop').checked = project.settings.loop;
+    api.applySettings(project.settings); api.apply(project.state, null); api.reservePointIds(frames);
+    timeline(); message('animation-status', `${project.name} · ${api.fmt(duration(),2)}초`);
+  }
+  installFiles({ $, isBusy: () => !!exporting, capture: captureProject, open: openProject });
   api.onPointsChange(reason => {
     if (exporting) return;
     pause();
@@ -281,4 +282,5 @@ export function installStudio(api) {
   });
   timeline();
   panelTab('controls');
+  return {captureProject,openProject,pause,isBusy:()=>!!exporting};
 }

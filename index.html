@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="./styles/app.css">
 <link rel="stylesheet" href="./styles/timeline.css">
 <link rel="stylesheet" href="./styles/menus.css">
+<link rel="stylesheet" href="./styles/coil.css">
 </head>
 <body>
 <main>
@@ -33,9 +34,14 @@
 <section id="view-menu" class="app-menu view-menu" popover aria-labelledby="view-menu-toggle">
       <h2 class="menu-title">보기</h2>
       <fieldset id="view-settings">
-        <p class="menu-label">작업 공간</p>
+        <p class="menu-label">화면</p>
+        <div class="workspace-options" role="radiogroup" aria-label="실험 화면">
+          <label><input type="radio" name="workspace-view" value="graphs" checked> 그래프 · 벡터</label>
+          <label><input type="radio" name="workspace-view" value="coil"> 코일 · 나침반</label>
+        </div>
+        <div class="menu-divider"></div><p class="menu-label">작업 공간</p>
         <button id="timeline-toggle" type="button" aria-expanded="true" aria-controls="timeline-dock">◇ 타임라인</button><button id="panel-toggle" type="button" aria-expanded="true" aria-controls="studio-panel">☷ <span>작업 패널</span></button>
-        <div class="menu-divider"></div><p class="menu-label">화면</p>
+        <div class="menu-divider"></div><p class="menu-label">표시 방식</p>
         <button id="theme" type="button" title="화면 테마 변경" aria-label="화면 테마: 시스템">◐ 테마 · <span id="theme-label">시스템</span></button><button id="present" type="button" aria-pressed="false" title="조작 패널을 접고 그래프를 크게 표시합니다">⛶ <span>발표 모드</span></button>
       </fieldset>
     </section>
@@ -57,12 +63,30 @@
     <div class="slider-panel"><div class="slider-heading"><label for="current-slider">전류 조절</label><div class="presets" aria-label="전류 프리셋"><button type="button" data-current="-125">−125</button><button type="button" data-current="0">0</button><button type="button" data-current="125">125</button><button type="button" data-current="250">250 <small>mA</small></button></div></div><input id="current-slider" type="range" min="-500" max="500" step="0.1"><div class="range-labels"><span id="slider-min">−500 mA</span><span>0</span><span id="slider-max">500 mA</span></div></div>
   </section>
 </div>
+    <section id="coil-workspace" class="coil-stage" aria-label="코일과 나침반 실험">
+      <div class="coil-heading"><div><p class="eyebrow">CURRENT / FIELD / COMPASS</p><h2>코일과 나침반</h2></div><button class="info-button" type="button" popovertarget="coil-help" aria-label="실험 목적과 예비보고서">?</button></div>
+      <canvas id="coil-canvas" tabindex="0" role="img" aria-label="여러 바퀴 감은 코일, 움직이는 전류와 자기력선, 중심축 위의 나침반. 좌우 방향키 또는 드래그로 나침반 위치를 조절합니다."></canvas>
+      <div class="coil-readouts"><div><small>나침반 위치 x</small><strong id="coil-position-readout">−3R</strong></div><div><small>바늘 편향 𝜃</small><strong id="coil-angle">0°</strong></div><div><small>코일 자기장 / 초기 지구 자기장</small><strong id="coil-field">0</strong></div></div>
+      <div id="coil-help" class="tip" popover><h3>실험 목적</h3><p>전류에 의해 만들어지는 자기장을 이해하고, 이를 이용해서 전류계를 만들어봅니다. 제작 후 조교가 전류계의 정확도를 측정하여 점수를 줍니다.</p><h3>예비보고서</h3><p>나침반을 이용해 전선에 흐르는 전류의 크기를 측정하는 장치를 제작합니다. 전선을 고리 형태로 여러 바퀴 감고 전류를 흘리면 어느 방향의 자기장이 만들어질까요? 고리 안에 놓인 나침반은 어디를 향할까요?</p><p>나침반 바늘은 지구 자기장과 코일 자기장의 벡터합을 가리킵니다. 오른손 손가락을 전류 방향으로 감으면 엄지가 코일 내부 자기장 방향입니다. x는 코일 중심축 위치이며 R은 코일 반지름입니다.</p><p>밝은 점은 선을 그리는 방향을 나타내는 시각적 표시입니다. 자기력선은 코일 안을 통과하고 바깥으로 돌아오는 위·아래 대칭 경로로 표현합니다. 가로 중심을 맞춘 타원의 안쪽 면이 코일을 지나며, 큰 경로는 곡선과 평행한 직선으로 이어집니다. 자기력선 자체가 공간을 흐르거나 전자가 이 속도로 이동한다는 뜻은 아닙니다. 자기력선 개수는 상대적인 자기장 세기를 표현하며 실제 자기선속의 측정값은 아닙니다.</p><p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-4-magnetic-field-of-a-current-loop" target="_blank" rel="noreferrer">계산 근거: 원형 전류 고리의 자기장</a></p></div>
+    </section>
     <div id="panel-splitter" class="panel-splitter" role="separator" aria-label="패널 너비 조절" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="520" aria-valuenow="310" tabindex="0"></div>
     <aside class="studio-panel" id="studio-panel" aria-label="그래프 작업 패널">
       <div class="panel-head"><span>작업 패널</span><button id="panel-close" type="button" aria-label="패널 접기" title="그래프 영역 넓히기">›</button></div>
       <div class="panel-tabs" role="tablist" aria-label="작업 도구"><button role="tab" id="tab-controls" data-panel-tab="controls" aria-controls="panel-controls" aria-selected="true">조절</button><button role="tab" id="tab-animation" data-panel-tab="animation" aria-controls="panel-animation" aria-selected="false">속성</button><button role="tab" id="tab-export" data-panel-tab="export" aria-controls="panel-export" aria-selected="false">내보내기</button></div>
       <div class="panel-body">
-        <section id="panel-controls" role="tabpanel" aria-labelledby="tab-controls">  <details class="card" open><summary>정밀 조절 <span>전류 · 각도 · 자기장</span></summary>      <div class="controls">
+        <section id="panel-controls" role="tabpanel" aria-labelledby="tab-controls">
+          <div class="coil-controls">
+            <div class="section-heading"><h2>코일과 나침반</h2><button id="coil-retrace" type="button" title="궤적을 지우고 처음부터 다시 그리기">다시 그리기</button></div>
+            <div class="coil-layers" role="group" aria-label="표현할 요소"><label><input id="coil-show-current" type="checkbox" checked><span>전류 흐름</span></label><label><input id="coil-show-field" type="checkbox" checked><span>자기력선</span></label><label><input id="coil-show-compass" type="checkbox" checked><span>나침반</span></label></div>
+            <label class="field"><span>전류 𝐼 · mA</span><input id="coil-current-number" type="number" min="-1000000" max="1000000" step="any" value="125"></label>
+            <input id="coil-current" type="range" min="-1000" max="1000" step="1" value="125" aria-label="코일 전류"><div class="range-labels"><span>−1000 mA</span><span>0</span><span>1000 mA</span></div>
+            <label class="field"><span>지구 자기장 · 초기값 대비</span><input id="coil-earth" type="number" min="0.05" max="100" step="0.05" value="1"></label>
+            <div class="section-heading"><h3>나침반 위치</h3><button id="compass-center" type="button">중앙</button></div>
+            <label class="field"><span>중심축 x · R</span><input id="compass-position-number" type="number" min="-3" max="3" step="0.01" value="-3"></label>
+            <input id="compass-position" type="range" min="-3" max="3" step="0.01" value="-3" aria-label="나침반 x 위치"><div class="range-labels"><span>왼쪽 −3R</span><span>중앙</span><span>오른쪽 3R</span></div>
+            <button id="compass-demo" type="button" class="primary wide-button">왼쪽 → 중앙 → 오른쪽</button>
+          </div>
+  <details class="card" open><summary>정밀 조절 <span>전류 · 각도 · 자기장</span></summary>      <div class="controls">
         <label class="field">
           <span>전류 <span class="math">𝐼</span> (mA)</span>
           <input id="current" type="number" step="any" min="-1000000" max="1000000">
@@ -115,7 +139,7 @@
           <fieldset id="keyframe-inspector-controls">            <div id="keyframe-editor" hidden>
               <div class="section-heading"><h3>선택한 키프레임</h3><button type="button" id="keyframe-delete" aria-label="선택한 키프레임 삭제">삭제</button></div>
               <div class="keyframe-fields"><label class="field">이름<input id="keyframe-name" maxlength="40"></label><label class="field">시간 (s)<input id="keyframe-time" type="number" min="0" max="300" step="0.1"></label><label class="field">전류 𝐼 (mA)<input id="keyframe-current" type="number" min="-1000000" max="1000000" step="any"></label><label class="field">지구 자기장 𝑒<input id="keyframe-earth" type="number" min="0.05" max="100" step="any"></label></div>
-              <details class="keyframe-points"><summary>저장한 점의 전류</summary><div id="keyframe-points"></div></details>
+              <label id="keyframe-compass-field" class="field" hidden><span>나침반 x · R</span><input id="keyframe-compass" type="number" min="-3" max="3" step="0.01"></label><details class="keyframe-points"><summary>저장한 점의 전류</summary><div id="keyframe-points"></div></details>
               <button id="keyframe-update" type="button" class="wide-button">현재 값으로 갱신</button>
             </div>
 </fieldset>

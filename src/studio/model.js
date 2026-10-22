@@ -9,13 +9,14 @@ export function validateFrames(value) {
       times.add(f.time);
       const s = f.state;
       if (!s || !Number.isFinite(s.current) || Math.abs(s.current) > 1e6 || !Number.isFinite(s.earth) || s.earth < .05 || s.earth > 100 || !Array.isArray(s.points) || s.points.length > 200) throw Error('키프레임의 값이 허용 범위를 벗어났습니다.');
+      if(s.compassX !== undefined && (!Number.isFinite(s.compassX)||Math.abs(s.compassX)>3)) throw Error('나침반 위치는 −3R~3R 범위여야 합니다.');
       const ids = new Set();
       const points = s.points.map(p => {
         if (!Number.isSafeInteger(p.id) || p.id < 1 || ids.has(p.id) || !Number.isFinite(p.i) || Math.abs(p.i) > 1e6 || !/^(#[0-9a-f]{3,8}|var\(--(blue|green)\))$/i.test(p.color)) throw Error('저장한 점의 값이 올바르지 않습니다.');
         if(p.opacity!==undefined && (!Number.isFinite(p.opacity)||p.opacity<0||p.opacity>1)) throw Error('점의 표시 상태가 올바르지 않습니다.');
         ids.add(p.id); return {id:p.id, i:p.i, color:p.color, ...(p.opacity===undefined?{}:{opacity:p.opacity})};
       });
-      return {id:index + 1, name:String(f.name || `키프레임 ${index + 1}`).slice(0,40), time:f.time, state:{current:s.current, earth:s.earth, points}};
+      return {id:index + 1, name:String(f.name || `키프레임 ${index + 1}`).slice(0,40), time:f.time, state:{current:s.current, earth:s.earth, points, ...(s.compassX===undefined?{}:{compassX:s.compassX})}};
     }).sort((a,b) => a.time-b.time);
   }
 
@@ -55,7 +56,7 @@ export function createAnimationModel({ api, getFrames, getEasing, duration }) {
       const pa = a.state.points.find(p=>p.id===id), pb = b.state.points.find(p=>p.id===id);
       return {id, color:(pb || pa).color, i:lerp((pa || pb).i,(pb || pa).i,t), opacity:lerp(pa?(pa.opacity??1):0,pb?(pb.opacity??1):0,t)};
     });
-    return {current:lerp(a.state.current,b.state.current,t), earth:lerp(a.state.earth,b.state.earth,t), points};
+    return {current:lerp(a.state.current,b.state.current,t), earth:lerp(a.state.earth,b.state.earth,t), points, ...((a.state.compassX!==undefined||b.state.compassX!==undefined)?{compassX:lerp(a.state.compassX??0,b.state.compassX??0,t)}:{})};
   }
 return { stateAt, rangeAt };
 }

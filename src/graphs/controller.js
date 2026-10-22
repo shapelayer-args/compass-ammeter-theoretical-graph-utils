@@ -13,6 +13,7 @@ export function createGraphController() {
   let colorIndex = 0;
   let points = [];
   const pointListeners = new Set();
+  const stateListeners = new Set();
   const notifyPoints = (reason) => pointListeners.forEach(listener => listener(reason));
   let current = 125;
   let axisMode = "angle";
@@ -151,6 +152,7 @@ export function createGraphController() {
     slider.value = current;
     $("slider-min").textContent = `${fmt(-sliderLimit)} mA`;
     $("slider-max").textContent = `${fmt(sliderLimit)} mA`;
+    stateListeners.forEach(listener => listener());
   }
 
   // Native number validation, with a numerical safety check for programmatic input.
@@ -424,6 +426,9 @@ export function createGraphController() {
   $("reset").addEventListener("click", reset);
   reset();
   return {
+    exitTheater: () => { if(theater) setTheater(null); },
+    setCurrent,
+    onStateChange(listener) { stateListeners.add(listener); return () => stateListeners.delete(listener); },
     captureSettings: () => ({ axisMode, theme: presentation.getTheme() }),
     applySettings(settings) {
       axisMode = settings.axisMode;
@@ -452,7 +457,7 @@ export function createGraphController() {
       scales.vectorScale = view ? view.vectorScale : autoVectorScale();
       render(); renderList();
     },
-    release() { playbackView = null; render(); },
+    release(options = {}) { playbackView = null; if(!options.silent) render(); },
     settle() {
       stopCurveAnimation(); stopScaleAnimation();
       scales.curveBounds = playbackView ? { yMax: playbackView.yMax, xMax: axisMode === "angle" ? 90 : playbackView.xMax, mode: axisMode } : autoCurveBounds();

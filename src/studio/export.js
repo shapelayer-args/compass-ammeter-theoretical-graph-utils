@@ -16,6 +16,12 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
     return new XMLSerializer().serializeToString(source).replace(/var\(--([a-z-]+)\)/g,(_,name)=>palette[name]||palette.ink);
   }
   function composition(options,time=null) {
+    if(api.captureSettings().workspace==='coil') {
+      const width=1920,height=1080,p=PALETTES[options.theme]||PALETTES.light;
+      const image=api.renderScene(options.theme);
+      const stamp=time===null?'':`<text x="1880" y="52" text-anchor="end" fill="${p.muted}" font-size="20">${time.toFixed(2)} s</text>`;
+      return {width,height,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="${p.plot}"/><image href="${image}" x="0" y="80" width="1920" height="980" preserveAspectRatio="xMidYMid meet"/><text x="40" y="52" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="28">코일과 나침반</text>${stamp}</svg>`};
+    }
     const both=options.target==='both',width=both?1920:1600,height=1080,p=PALETTES[options.theme]||PALETTES.light;
     const ids=both?['curve','vectors']:[options.target],gap=24,margin=36,boxWidth=(width-margin*2-gap*(ids.length-1))/ids.length;
     let body=`<rect width="${width}" height="${height}" fill="${p.bg}"/><text x="${margin}" y="58" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="28" font-weight="650">나침반 전류계</text>`;
@@ -72,8 +78,8 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
   const videoExtension=videoMime?.startsWith('video/mp4')?'mp4':'webm';
   $('video-support').textContent=videoMime?`1080p · 30 fps · ${videoExtension.toUpperCase()}\n키프레임 2개 이상이 필요합니다. 전체 타임라인을 화면과 같은 속도로 녹화합니다.`:'이 브라우저는 영상 저장을 지원하지 않습니다. PNG·SVG 이미지 저장은 사용할 수 있습니다.';
   function exportLock(locked) {
-    stage.inert=locked;
-    $('view-settings').disabled=locked;$('file-settings').disabled=locked;$('animation-controls').disabled=locked;$('keyframe-inspector-controls').disabled=locked;$('timeline-scroll').inert=locked;$('timeline-splitter').inert=locked;$('export-settings').disabled=locked;
+    stage.inert=locked;$('coil-workspace').inert=locked;$('panel-controls').inert=locked;
+    $('view-settings').disabled=locked;$('file-settings').disabled=locked;$('animation-controls').disabled=locked;$('keyframe-inspector-controls').disabled=locked;$('timeline-scroll').inert=locked;$('timeline-splitter').inert=locked;$('export-settings').disabled=locked;$('export-target').disabled=locked||api.captureSettings().workspace==='coil';
     document.querySelectorAll('[data-panel-tab], .header-actions button, #reset, #add-active, #help-open').forEach(button=>{button.disabled=locked;});
     $('panel-close').disabled=locked;$('panel-splitter').inert=locked;
     $('export-progress').hidden=!locked;$('export-cancel').hidden=!locked;

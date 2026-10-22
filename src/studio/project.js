@@ -16,11 +16,17 @@ export function validateProject(value) {
       || !Number.isFinite(value.playhead) || value.playhead < 0 || value.playhead > 300) {
     throw Error('프로젝트 설정이 올바르지 않습니다.');
   }
+  const workspace=s.workspace??'graphs';
+  if(!['graphs','coil'].includes(workspace)) throw Error('지원하지 않는 화면입니다.');
+  const coil=s.coil??{showCurrent:true,showField:true,showCompass:true};
+  if(!coil||['showCurrent','showField','showCompass'].some(k=>typeof coil[k]!=='boolean')) throw Error('코일 표시 설정이 올바르지 않습니다.');
+  const layout=s.layout??{panelClosed:false,timelineHidden:false,presenting:false};
+  if(!layout||['panelClosed','timelineHidden','presenting'].some(k=>typeof layout[k]!=='boolean')) throw Error('화면 배치 설정이 올바르지 않습니다.');
   return {
     format: PROJECT_FORMAT, version: PROJECT_VERSION,
     name: String(value.name || '나침반 실험').trim().slice(0, 60) || '나침반 실험',
     state, frames, playhead: value.playhead,
-    settings: { axisMode: s.axisMode, theme: s.theme, easing: s.easing, loop: s.loop }
+    settings: { axisMode: s.axisMode, theme: s.theme, easing: s.easing, loop: s.loop, workspace, layout:{panelClosed:layout.panelClosed,timelineHidden:layout.timelineHidden,presenting:layout.presenting}, coil: {showCurrent:coil.showCurrent,showField:coil.showField,showCompass:coil.showCompass} }
   };
 }
 
