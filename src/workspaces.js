@@ -3,9 +3,10 @@ import { PROJECT_FORMAT, PROJECT_VERSION, validateProject } from './studio/proje
 export function createCompassDemo(api) {
   const base=api.capture();
   const frames=[[0,-3],[1,-3],[3,0],[4,0],[6,3],[7,3]].map(([time,compassX],i)=>({
-    id:i+1,time,name:`나침반 ${compassX===0?'중앙':compassX<0?'왼쪽':'오른쪽'}`,
-    state:{...structuredClone(base),current:250,earth:1,points:[],compassX}
+    id:i+2,time:time+.5,name:`나침반 ${compassX===0?'중앙':compassX<0?'왼쪽':'오른쪽'}`,
+    state:{...structuredClone(base),current:1000,earth:1,points:[],compassX}
   }));
+  frames.unshift({id:1,time:0,name:'전류 켜기 전',state:{...structuredClone(frames[0].state),current:0}});
   return {
     format:PROJECT_FORMAT,version:PROJECT_VERSION,name:'코일과 나침반',
     state:structuredClone(frames[0].state),frames,playhead:0,

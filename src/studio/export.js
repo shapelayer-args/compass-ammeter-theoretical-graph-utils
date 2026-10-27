@@ -1,3 +1,4 @@
+import { encodeFrames, supportsFrameExport } from './frame-export.js';
 export function installExport({ api, $, stage, pause, message, seek, duration, clock, getFrames, getPlayhead, setPlayhead, getExporting, setExporting }) {
   const PALETTES={
     light:{bg:'#f3f2f5',surface:'#ffffff',plot:'#f6f5f8',ink:'#25232a',muted:'#74717d',line:'#e5e2e9',grid:'#e6e3eb',axis:'#b4afbd',curve:'#67508c',blue:'#556bba',green:'#348575',orange:'#c27543'},
@@ -44,6 +45,21 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
       ctx.clearRect(0,0,width,height);ctx.drawImage(image,0,0,width,height);
     } finally {URL.revokeObjectURL(url);}
   }
+  async function renderVideoFrame(ctx,options,time,offline=false) {
+    if(api.captureSettings().workspace!=='coil') {
+      const image=composition(options,time);
+      await rasterize(ctx,image.svg,image.width,image.height);
+      return;
+    }
+    // Keep video frames as pixels: no PNG encoding, SVG wrapping or image decode.
+    const p=PALETTES[options.theme]||PALETTES.light;
+    ctx.fillStyle=p.plot;ctx.fillRect(0,0,1920,1080);
+    ctx.drawImage(api.renderSceneCanvas(options.theme,offline?time:undefined),0,80,1920,980);
+    ctx.fillStyle=p.ink;ctx.font='28px system-ui, sans-serif';ctx.textAlign='left';
+    ctx.fillText('코일과 나침반',40,52);
+    ctx.fillStyle=p.muted;ctx.font='20px system-ui, sans-serif';ctx.textAlign='right';
+    ctx.fillText(`${time.toFixed(2)} s`,1880,52);ctx.textAlign='left';
+  }
   let lastExportUrl = null;
   function download(blob,name) {
     const url=URL.createObjectURL(blob),link=document.createElement('a');
@@ -76,7 +92,17 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
   const videoMime=typeof MediaRecorder!=='undefined'&&HTMLCanvasElement.prototype.captureStream?
     ['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type)):null;
   const videoExtension=videoMime?.startsWith('video/mp4')?'mp4':'webm';
-  $('video-support').textContent=videoMime?`1080p · 30 fps · ${videoExtension.toUpperCase()}\n키프레임 2개 이상이 필요합니다. 전체 타임라인을 화면과 같은 속도로 녹화합니다.`:'이 브라우저는 영상 저장을 지원하지 않습니다. PNG·SVG 이미지 저장은 사용할 수 있습니다.';
+  const canFrames=supportsFrameExport();
+  if(!canFrames)$('video-method').value='realtime';
+  function videoSupport() {
+    const frames=$('video-method').value==='frames';
+    $('video-acceleration').disabled=!frames;
+    $('video-support').textContent=frames
+      ? '1080p · WebM · 프레임별 렌더링'
+      : '1080p · 실시간 녹화 · 처리 성능에 따라 프레임이 누락될 수 있습니다.';
+    if(frames)$('video-support').textContent=canFrames?'각 프레임을 순서대로 렌더링·압축합니다. 처리 속도와 관계없이 선택한 FPS를 유지합니다. 하드웨어 가속은 기기 지원에 따라 적용됩니다.':'프레임별 렌더링을 지원하지 않는 브라우저입니다. 실시간 녹화를 선택하세요.';
+  }
+  $('video-method').addEventListener('change',videoSupport);videoSupport();
   function exportLock(locked) {
     stage.inert=locked;$('coil-workspace').inert=locked;$('panel-controls').inert=locked;
     $('view-settings').disabled=locked;$('file-settings').disabled=locked;$('animation-controls').disabled=locked;$('keyframe-inspector-controls').disabled=locked;$('timeline-scroll').inert=locked;$('timeline-splitter').inert=locked;$('export-settings').disabled=locked;$('export-target').disabled=locked||api.captureSettings().workspace==='coil';
@@ -86,17 +112,31 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
   }
   $('export-cancel').addEventListener('click',()=>{if(getExporting())getExporting().cancelled=true;});
   $('export-video').addEventListener('click',async()=>{
-    if(getExporting()||!videoMime||getFrames().length<2||!duration())return;
+    if(getExporting()||getFrames().length<2||!duration())return;
+    const offline=$('video-method').value==='frames';
+    if(offline?!canFrames:!videoMime){message('export-status','선택한 내보내기 방식을 지원하지 않습니다. 다른 방식을 선택하세요.');return;}
+    const fps=Number($('video-fps').value)||30,bitrate=Number($('video-bitrate').value)||8000000;
     pause();const previous=api.capture(),previousHead=getPlayhead(),options=exportOptions(),control={cancelled:false};
     const chunks=[];let recorder=null,stream=null,finished=null,recordError=null;
     setExporting(control);exportLock(true);$('export-progress').value=0;
     message('export-status','영상을 준비하고 있습니다…');
     try {
       await document.fonts.ready;seek(0);api.settle();
-      const first=composition(options,0),canvas=document.createElement('canvas');canvas.width=first.width;canvas.height=first.height;
-      const ctx=canvas.getContext('2d');await rasterize(ctx,first.svg,first.width,first.height);
+      api.setSceneExporting?.(true);
+      const canvas=document.createElement('canvas');
+      canvas.width=api.captureSettings().workspace==='coil'||options.target==='both'?1920:1600;canvas.height=1080;
+      const ctx=canvas.getContext('2d');
+      if(offline) {
+        api.beginSceneFrames?.();
+        const blob=await encodeFrames({canvas,fps,total:duration(),bitrate,acceleration:$('video-acceleration').value||'no-preference',
+          render:async time=>{seek(time);api.settle();await renderVideoFrame(ctx,options,time,true);},
+          cancelled:()=>control.cancelled,progress:(value,done,count)=>{$('export-progress').value=value;message('export-status',`프레임 렌더링·압축 중 · ${done} / ${count}`);}});
+        if(blob){download(blob,'compass-animation.webm');message('export-status',`${fps} fps WebM 영상 다운로드를 시작했습니다.`);}
+        return;
+      }
+      await renderVideoFrame(ctx,options,0);
       if(control.cancelled)return;
-      stream=canvas.captureStream(30);recorder=new MediaRecorder(stream,{mimeType:videoMime,videoBitsPerSecond:8_000_000});
+      stream=canvas.captureStream(fps);recorder=new MediaRecorder(stream,{mimeType:videoMime,videoBitsPerSecond:bitrate});
       finished=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>{recordError=Error('영상 녹화 중 오류가 발생했습니다.');reject(recordError);};});
       finished.catch(()=>{});
       recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
@@ -104,10 +144,10 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
       const start=performance.now(),total=duration();
       while(!control.cancelled && !recordError) {
         const frameStart=performance.now(),time=Math.min(total,(frameStart-start)/1000);
-        seek(time);const image=composition(options,time);await rasterize(ctx,image.svg,image.width,image.height);
+        seek(time);await renderVideoFrame(ctx,options,time);
         $('export-progress').value=time/total;message('export-status',`영상 저장 중 · ${Math.round(time/total*100)}% · 이 탭을 열어 두세요.`);
         if(time>=total)break;
-        await new Promise(resolve=>setTimeout(resolve,Math.max(0,1000/30-(performance.now()-frameStart))));
+        await new Promise(resolve=>setTimeout(resolve,Math.max(0,1000/fps-(performance.now()-frameStart))));
       }
       if(!control.cancelled)await new Promise(resolve=>setTimeout(resolve,100));
       if(recorder.state!=='inactive')recorder.stop();await finished;
@@ -119,9 +159,10 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
     }catch(error){message('export-status',error.message);}finally{
       if(recorder&&recorder.state!=='inactive'){recorder.stop();if(finished)await finished.catch(()=>{});}
       stream?.getTracks().forEach(track=>track.stop());
-      setExporting(null);exportLock(false);api.apply(previous,null);setPlayhead(previousHead);clock();
+      api.endSceneFrames?.();
+      setExporting(null);exportLock(false);api.apply(previous,null);setPlayhead(previousHead);clock();api.setSceneExporting?.(false);
       if(control.cancelled)message('export-status','영상 내보내기를 취소했습니다.');
     }
   });
-return { videoMime };
+return { videoMime:canFrames?'video/webm':videoMime };
 }

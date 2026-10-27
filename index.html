@@ -150,7 +150,11 @@
             <label class="field">그래프<select id="export-target"><option value="both">두 그래프 함께</option><option value="curve">전류와 편향각</option><option value="vectors">자기장의 합</option></select></label>
             <label class="field">배경<select id="export-theme"><option value="current">현재 테마</option><option value="light">라이트</option><option value="dark">다크</option></select></label>
             <div class="export-block"><h3>이미지</h3><label class="field">파일 형식<select id="export-format"><option value="png">PNG · 고해상도 이미지</option><option value="svg">SVG · 벡터 이미지</option></select></label><button id="export-image" type="button" class="primary wide-button">이미지 저장</button></div>
-            <div class="export-block"><h3>애니메이션 영상</h3><p id="video-support" class="panel-note"></p><button id="export-video" type="button" class="primary wide-button">영상 저장</button></div>
+            <div class="export-block"><h3>애니메이션 영상</h3>
+<label class="field">내보내기 방식<select id="video-method"><option value="frames">프레임별 렌더링 · WebM</option><option value="realtime">실시간 녹화</option></select></label>
+<label class="field">초당 프레임 수<select id="video-fps"><option>24</option><option selected>30</option><option>60</option></select></label>
+<label class="field">화질<select id="video-bitrate"><option value="4000000">표준 · 4 Mbps</option><option value="8000000" selected>높음 · 8 Mbps</option><option value="16000000">최고 · 16 Mbps</option></select></label>
+<label class="field">압축 가속<select id="video-acceleration"><option value="no-preference">자동</option><option value="prefer-hardware">하드웨어 우선</option><option value="prefer-software">소프트웨어 우선</option></select></label><p id="video-support" class="panel-note"></p><button id="export-video" type="button" class="primary wide-button">영상 저장</button></div>
           </fieldset>
           <progress id="export-progress" value="0" max="1" hidden aria-label="영상 내보내기 진행률"></progress><button type="button" id="export-cancel" class="wide-button" hidden>내보내기 취소</button>
           <p id="export-status" class="panel-status" role="status" aria-live="polite"></p>
@@ -177,9 +181,9 @@
         <div id="keyframe-list" class="timeline-tracks"></div>
         <div id="timeline-cursor" class="timeline-cursor" aria-hidden="true"><span id="timeline-cursor-time">0.00</span></div>
       </div></div>
-      <div class="timeline-footer"><span>빈 곳 두 번 클릭: 키프레임 추가 · ◆ 드래그: 시간 이동 · ← →: 0.1초 이동</span><p id="animation-status" role="status" aria-live="polite"></p></div>
+      <div class="timeline-footer"><span>Ctrl/⌘ 클릭·영역 드래그: 여러 개 선택 · ◆ 드래그: 함께 이동 · Delete: 삭제</span><p id="animation-status" role="status" aria-live="polite"></p></div>
     </fieldset>
-    <div id="animation-info" class="tip" popover>시간 눈금을 누르거나 드래그하면 재생 위치가 바뀝니다. 트랙의 빈 곳을 두 번 클릭하면 그 시간에 현재 상태를 기록합니다. 다이아몬드를 드래그하면 키프레임을 옮깁니다. 기본은 0.1초 간격이며 드래그 중 Shift를 누르면 0.01초 단위로 조절됩니다. 한 열의 키프레임들은 전류·지구 자기장·저장한 점을 함께 기록한 같은 상태입니다. 선택한 키프레임의 값은 우측 속성 패널에서 수정할 수 있습니다. 점을 추가하거나 삭제하면 트랙이 즉시 갱신됩니다. 키프레임이 있다면 현재 재생 위치의 점 구성을 자동으로 기록하며, 다른 시점에 기록된 점의 트랙은 유지됩니다. 재생 중에도 값에 맞춰 두 그래프의 축척과 눈금이 부드럽게 변합니다. 영상에도 같은 축척 변화가 반영됩니다.</div>
+    <div id="animation-info" class="tip" popover>시간 눈금을 누르거나 드래그하면 재생 위치가 바뀝니다. 트랙의 빈 곳을 두 번 클릭하면 그 시간에 현재 상태를 기록합니다. 다이아몬드를 드래그하면 키프레임을 옮깁니다. 기본은 0.1초 간격이며 드래그 중 Shift를 누르면 0.01초 단위로 조절됩니다. 각 변수의 키프레임은 독립적입니다. 현재 상태를 기록하면 바뀐 변수에만 키프레임이 추가됩니다. 트랙을 두 번 클릭하면 해당 변수만 기록하므로 같은 값을 유지하는 대기 구간도 직접 만들 수 있습니다. Ctrl 또는 Command를 누르고 클릭하면 선택을 추가하거나 해제합니다. 빈 트랙을 드래그하면 영역 안의 여러 키프레임을 선택합니다. 선택한 키프레임들은 함께 이동하거나 삭제할 수 있습니다. 선택한 키프레임의 값은 우측 속성 패널에서 수정할 수 있습니다. 점을 추가하거나 삭제하면 트랙이 즉시 갱신됩니다. 키프레임이 있다면 현재 재생 위치의 점 구성을 자동으로 기록하며, 다른 시점에 기록된 점의 트랙은 유지됩니다. 재생 중에도 값에 맞춰 두 그래프의 축척과 눈금이 부드럽게 변합니다. 영상에도 같은 축척 변화가 반영됩니다.</div>
   </section>
   <footer><!--FIELD LAB <span>전류와 자기장 사이, 보이지 않는 관계를 그리다.</span>--></footer>
   <dialog id="help"><div class="top"><h2>실험 원리와 조작</h2><button id="help-close" type="button" aria-label="도움말 닫기">✕</button></div>  <p class="intro muted">

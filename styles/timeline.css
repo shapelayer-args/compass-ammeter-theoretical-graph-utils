@@ -17,3 +17,7 @@ main,body[data-theater] main{padding:8px 10px;gap:6px;height:100dvh;min-height:6
 @media print{.timeline-dock,.timeline-splitter{display:none}main{height:auto;overflow:visible}}
 
 .file-settings{display:grid;gap:12px;min-width:0}.file-actions{display:flex;flex-wrap:wrap;gap:6px}.file-actions button{flex:1;white-space:nowrap;min-height:32px;padding:6px 10px;font-size:11px}.file-settings .section-heading{margin-top:10px}.file-settings input[type=text]{width:100%;min-width:0}.file-settings .wide-button{white-space:normal}
+
+#timeline-marquee{position:fixed;pointer-events:none;z-index:1000;border:1px solid var(--blue);background:color-mix(in srgb,var(--blue) 16%,transparent);border-radius:3px}
+.timeline-key[aria-selected="true"]{color:var(--blue);filter:drop-shadow(0 0 3px var(--blue));outline:1px solid var(--blue);outline-offset:1px}
+#keyframe-list{touch-action:none}

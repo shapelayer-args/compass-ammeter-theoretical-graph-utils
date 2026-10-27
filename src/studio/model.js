@@ -1,10 +1,11 @@
+import { independentFrames, channelValue, stateChannels } from './channels.js';
 import { clamp } from "../utils.js";
 const clone = value => structuredClone(value);
 const lerp = (a, b, t) => a + (b - a) * t;
 export function validateFrames(value) {
     if (!Array.isArray(value) || value.length > 120) throw Error('키프레임은 최대 120개까지 사용할 수 있습니다.');
     const times = new Set();
-    return value.map((f, index) => {
+    const validated = value.map((f, index) => {
       if (!Number.isFinite(f.time) || f.time < 0 || f.time > 300 || times.has(f.time)) throw Error('키프레임 시간은 중복 없이 0~300초로 지정하세요.');
       times.add(f.time);
       const s = f.state;
@@ -16,8 +17,10 @@ export function validateFrames(value) {
         if(p.opacity!==undefined && (!Number.isFinite(p.opacity)||p.opacity<0||p.opacity>1)) throw Error('점의 표시 상태가 올바르지 않습니다.');
         ids.add(p.id); return {id:p.id, i:p.i, color:p.color, ...(p.opacity===undefined?{}:{opacity:p.opacity})};
       });
-      return {id:index + 1, name:String(f.name || `키프레임 ${index + 1}`).slice(0,40), time:f.time, state:{current:s.current, earth:s.earth, points, ...(s.compassX===undefined?{}:{compassX:s.compassX})}};
+      if(f.channels!==undefined&&(!Array.isArray(f.channels)||f.channels.some(lane=>!(/^(current|earth|compass|point-[1-9][0-9]*)$/.test(lane)))))throw Error('키프레임 변수 정보가 올바르지 않습니다.');
+      return {...(f.channels===undefined?{}:{channels:[...new Set(f.channels)]}),id:index + 1, name:String(f.name || `키프레임 ${index + 1}`).slice(0,40), time:f.time, state:{current:s.current, earth:s.earth, points, ...(s.compassX===undefined?{}:{compassX:s.compassX})}};
     }).sort((a,b) => a.time-b.time);
+    return independentFrames(validated);
   }
 
 export function createAnimationModel({ api, getFrames, getEasing, duration }) {
@@ -43,20 +46,27 @@ export function createAnimationModel({ api, getFrames, getEasing, duration }) {
       vectorScale:Math.min(180,240/Math.max(1.3,Math.abs(state.current / 125)*1.18,state.earth*1.18))};
   }
   function stateAt(time) {
-    const frames = getFrames();
-    if (!frames.length) return api.capture();
-    if (time <= frames[0].time) return clone(frames[0].state);
-    if (time >= duration()) return clone(frames.at(-1).state);
-    const end = frames.findIndex(frame => frame.time > time);
-    const a = frames[end-1], b = frames[end];
-    let t = (time-a.time)/(b.time-a.time);
-    if (getEasing() === 'smooth') t = t*t*(3-2*t);
-    const ids = new Set([...a.state.points.map(p=>p.id), ...b.state.points.map(p=>p.id)]);
-    const points = [...ids].map(id => {
-      const pa = a.state.points.find(p=>p.id===id), pb = b.state.points.find(p=>p.id===id);
-      return {id, color:(pb || pa).color, i:lerp((pa || pb).i,(pb || pa).i,t), opacity:lerp(pa?(pa.opacity??1):0,pb?(pb.opacity??1):0,t)};
-    });
-    return {current:lerp(a.state.current,b.state.current,t), earth:lerp(a.state.earth,b.state.earth,t), points, ...((a.state.compassX!==undefined||b.state.compassX!==undefined)?{compassX:lerp(a.state.compassX??0,b.state.compassX??0,t)}:{})};
+    const frames=independentFrames(getFrames());
+    if(!frames.length)return api.capture();
+    const state=clone(frames[0].state);
+    const lanes=[...new Set(frames.flatMap(f=>[...stateChannels(f.state),...f.channels]))];
+    state.points=[];
+    for(const lane of lanes) {
+      const keys=frames.filter(f=>f.channels.includes(lane));
+      if(!keys.length)continue;
+      const end=keys.findIndex(f=>f.time>time);
+      const a=end===0?keys[0]:end<0?keys.at(-1):keys[end-1];
+      const b=end<=0?a:keys[end];
+      let t=a===b?0:clamp((time-a.time)/(b.time-a.time),0,1);
+      if(getEasing()==='smooth')t=t*t*(3-2*t);
+      const va=channelValue(a.state,lane),vb=channelValue(b.state,lane);
+      if(lane.startsWith('point-')) {
+        if(!va&&!vb)continue;
+        state.points.push({id:Number(lane.slice(6)),color:(vb||va).color,
+          i:lerp((va||vb).i,(vb||va).i,t),opacity:lerp(va?(va.opacity??1):0,vb?(vb.opacity??1):0,t)});
+      } else state[lane==='compass'?'compassX':lane]=lerp(va,vb,t);
+    }
+    return state;
   }
 return { stateAt, rangeAt };
 }

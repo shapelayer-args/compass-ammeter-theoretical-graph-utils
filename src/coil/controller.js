@@ -89,6 +89,10 @@ export function createExperimentController(graph) {
       setWorkspace(settings.workspace||'graphs');renderer.restart();
     },
     renderScene: theme => renderer.snapshot(theme),
+    renderSceneCanvas: (theme,time) => renderer.renderCanvas(theme,time),
+    beginSceneFrames:()=>renderer.beginFrames(),
+    endSceneFrames:()=>renderer.endFrames(),
+    setSceneExporting: value => renderer.setActive(workspace==='coil'&&!value),
     restartTrails:()=>renderer.restart()
   };
 }

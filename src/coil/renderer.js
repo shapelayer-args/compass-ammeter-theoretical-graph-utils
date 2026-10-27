@@ -11,6 +11,7 @@ export function createCoilRenderer(canvas, read) {
   let targetCanvas=canvas,ctx=canvas.getContext('2d'),exportCanvas=null;
   let paths = null, projectedPaths = null, frame = null, active = false, epoch = performance.now(), previousTime = epoch;
   let axialPaths=null, axialExtent=null;
+  let offline=null;
   let needle = 0, lastCurrent = null, births = new Map(), savedTime = 0;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let project = null;
@@ -122,7 +123,7 @@ export function createCoilRenderer(canvas, read) {
     }
     const fieldAtCompass=compassField(current,earth,compassX);
     const target=fieldAtCompass.angle,delta=Math.atan2(Math.sin(target-needle),Math.cos(target-needle));
-    const dt=Math.min(.1,Math.max(0,(now-previousTime)/1000));
+    const dt=offline?Math.max(0,(now-previousTime)/1000):Math.min(.1,Math.max(0,(now-previousTime)/1000));
     needle=reduced.matches?target:needle+delta*(1-Math.exp(-dt*14));previousTime=now;
     if(showCompass){
       const [px,py]=project([compassX,0,0]),r=Math.min(43,scale*.42);
@@ -141,6 +142,24 @@ export function createCoilRenderer(canvas, read) {
   function tick(now){frame=null;if(!active)return;draw(now);frame=requestAnimationFrame(tick);}
   return {
     draw,
+    beginFrames() {
+      offline={epoch,previousTime,needle,lastCurrent,births,savedTime,start:performance.now()};
+      epoch=0;previousTime=0;needle=0;lastCurrent=null;births=new Map();
+    },
+    endFrames() {
+      if(!offline)return;
+      const elapsed=performance.now()-offline.start;
+      ({epoch,previousTime,needle,lastCurrent,births,savedTime}=offline);
+      epoch+=elapsed;births=new Map([...births].map(([key,time])=>[key,time+elapsed]));
+      previousTime=performance.now();offline=null;
+    },
+    renderCanvas(theme,time) {
+      exportCanvas ||= document.createElement('canvas');
+      const previousCanvas=targetCanvas,previousContext=ctx;
+      targetCanvas=exportCanvas;ctx=exportCanvas.getContext('2d');
+      try {draw(time===undefined?performance.now():time*1000,theme,{width:1920,height:980});return exportCanvas;}
+      finally {targetCanvas=previousCanvas;ctx=previousContext;}
+    },
     snapshot(theme) {
       exportCanvas ||= document.createElement('canvas');
       targetCanvas=exportCanvas;ctx=exportCanvas.getContext('2d');
