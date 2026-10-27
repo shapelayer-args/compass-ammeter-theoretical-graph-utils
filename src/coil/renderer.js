@@ -1,3 +1,4 @@
+import { paletteFor } from '../palettes.js';
 import { compassField, fieldLineCount } from './physics.js';
 import { buildFieldLines, buildAxialLines, FIELD_PROFILE_ORDER } from './field-paths.js';
 import { fieldEmphasis, contourRank } from './field-emphasis.js';
@@ -39,16 +40,17 @@ export function createCoilRenderer(canvas, read) {
     if(targetCanvas.width!==Math.round(w*dpr)||targetCanvas.height!==Math.round(h*dpr)){targetCanvas.width=Math.round(w*dpr);targetCanvas.height=Math.round(h*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     const dark=(themeOverride||document.documentElement.dataset.theme)==='dark';
-    const ink=dark?'#eeebf3':'#383441',muted=dark?'#9a92ad':'#908a9c';
-    const wire=dark?'#bda6df':'#88719f',bright=dark?'#f0ddff':'#7551ad',charge=dark?'#dfc9ff':'#76519d';
-    ctx.fillStyle=dark?'#111026':'#f7f6fa';ctx.fillRect(0,0,w,h);
+    const seminar=document.documentElement.dataset.palette==='seminar',p=paletteFor(document.documentElement.dataset.palette,dark?'dark':'light');
+    const ink=seminar?p.ink:dark?'#eeebf3':'#383441',muted=seminar?p.muted:dark?'#9a92ad':'#908a9c';
+    const wire=seminar?p.curve:dark?'#bda6df':'#88719f',bright=seminar?p.orange:dark?'#f0ddff':'#7551ad',charge=seminar?p.orange:dark?'#dfc9ff':'#76519d';
+    ctx.fillStyle=seminar?p.plot:dark?'#111026':'#f7f6fa';ctx.fillRect(0,0,w,h);
     const scale=Math.min(w/8.5,h/3.8),cx=w/2,cy=h*.52;
     project=([x,y,z=0])=>[cx+scale*(x+.32*z),cy-scale*(y*.79+z*.44)];
     ctx.lineCap='round';ctx.lineJoin='round';
 
     // Fine spatial grid establishes the axis without competing with the trajectories.
-    for(let x=-4;x<=4;x++){line([[x,-2,0],[x,2,0]],0,1,dark?'#ffffff08':'#5544770a',.6);}
-    line([[-4,0,0],[4,0,0]],0,1,dark?'#9182aa55':'#8d7caa44',.8);
+    for(let x=-4;x<=4;x++){line([[x,-2,0],[x,2,0]],0,1,seminar?p.grid:dark?'#ffffff08':'#5544770a',.6);}
+    line([[-4,0,0],[4,0,0]],0,1,seminar?p.axis+'55':dark?'#9182aa55':'#8d7caa44',.8);
     ctx.font='11px system-ui';ctx.fillStyle=muted;
     for(const x of [-3,-2,-1,0,1,2,3]) {const [px,py]=project([x,-.09,0]);ctx.fillText(`${x}R`,px-8,py+18);}
     ctx.fillText('중심축 x',...project([3.4,-.18,0]));
@@ -73,7 +75,9 @@ export function createCoilRenderer(canvas, read) {
       // Screen blending accumulates light where contours overlap. A soft
       // violet gradient keeps the central band restrained despite dense overlaps.
       const fieldInk=ctx.createLinearGradient(0,cy-h*.55,0,cy+h*.55);
-      const stops=dark
+      const stops=seminar
+        ? [[0,p.curve+'18'],[.25,p.curve+'28'],[.43,p.curve+'30'],[.5,p.orange+'30'],[.57,p.curve+'30'],[.75,p.curve+'28'],[1,p.curve+'18']]
+        : dark
         ? [[0,'#8065bc18'],[.25,'#9e7cd32e'],[.43,'#b293d832'],[.5,'#bda0df30'],[.57,'#b293d832'],[.75,'#9e7cd32e'],[1,'#8065bc18']]
         : [[0,'#70529c12'],[.25,'#7855aa28'],[.43,'#8053ad32'],[.5,'#70509a38'],[.57,'#8053ad32'],[.75,'#7855aa28'],[1,'#70529c12']];
       for(const [offset,color] of stops)fieldInk.addColorStop(offset,color);
@@ -128,15 +132,15 @@ export function createCoilRenderer(canvas, read) {
     if(showCompass){
       const [px,py]=project([compassX,0,0]),r=Math.min(43,scale*.42);
       ctx.save();ctx.translate(px,py);
-      ctx.fillStyle=dark?'#25232de8':'#fffffff0';ctx.strokeStyle=wire+'77';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle=seminar?p.surface+'f0':dark?'#25232de8':'#fffffff0';ctx.strokeStyle=wire+'77';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillStyle=muted;ctx.fillText('N',0,-r-9);
       for(let k=0;k<24;k++){ctx.save();ctx.rotate(k*Math.PI/12);ctx.beginPath();ctx.moveTo(0,-r+3);ctx.lineTo(0,-r+(k%6?6:10));ctx.stroke();ctx.restore();}
-      ctx.rotate(needle);ctx.fillStyle=dark?'#edab83':'#c67448';ctx.beginPath();ctx.moveTo(0,-r*.74);ctx.lineTo(r*.14,0);ctx.lineTo(-r*.14,0);ctx.fill();
+      ctx.rotate(needle);ctx.fillStyle=seminar?p.orange:dark?'#edab83':'#c67448';ctx.beginPath();ctx.moveTo(0,-r*.74);ctx.lineTo(r*.14,0);ctx.lineTo(-r*.14,0);ctx.fill();
       ctx.fillStyle=wire;ctx.beginPath();ctx.moveTo(0,r*.74);ctx.lineTo(r*.14,0);ctx.lineTo(-r*.14,0);ctx.fill();ctx.restore();
-      ctx.fillStyle=ink;ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(`𝜃 ${fmt(fieldAtCompass.angle*180/Math.PI,1)}°`,px,py+r+23);ctx.textAlign='start';
+      if(!size){ctx.fillStyle=ink;ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(`𝜃 ${fmt(fieldAtCompass.angle*180/Math.PI,1)}°`,px,py+r+23);ctx.textAlign='start';}
     }
-    ctx.fillStyle=muted;ctx.font='11px system-ui';ctx.fillText('지구 자기장 ↑ 자북',20,28);
-    ctx.fillText(`𝐼 ${fmt(current)} mA`,20,h-20);
+    if(!size){ctx.fillStyle=muted;ctx.font='11px system-ui';ctx.fillText('지구 자기장 ↑ 자북',20,28);
+    ctx.fillText(`𝐼 ${fmt(current)} mA`,20,h-20);}
     savedTime=now;
   }
   function tick(now){frame=null;if(!active)return;draw(now);frame=requestAnimationFrame(tick);}
@@ -157,13 +161,13 @@ export function createCoilRenderer(canvas, read) {
       exportCanvas ||= document.createElement('canvas');
       const previousCanvas=targetCanvas,previousContext=ctx;
       targetCanvas=exportCanvas;ctx=exportCanvas.getContext('2d');
-      try {draw(time===undefined?performance.now():time*1000,theme,{width:1920,height:980});return exportCanvas;}
+      try {draw(time===undefined?performance.now():time*1000,theme,{width:1920,height:1080});return exportCanvas;}
       finally {targetCanvas=previousCanvas;ctx=previousContext;}
     },
     snapshot(theme) {
       exportCanvas ||= document.createElement('canvas');
       targetCanvas=exportCanvas;ctx=exportCanvas.getContext('2d');
-      try {draw(performance.now(),theme,{width:1920,height:980});return exportCanvas.toDataURL('image/png');}
+      try {draw(performance.now(),theme,{width:1920,height:1080});return exportCanvas.toDataURL('image/png');}
       finally {targetCanvas=canvas;ctx=canvas.getContext('2d');draw();}
     },
     setActive(value){active=value;if(frame!==null)cancelAnimationFrame(frame);frame=null;if(active){previousTime=performance.now();frame=requestAnimationFrame(tick);}},

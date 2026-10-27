@@ -429,13 +429,14 @@ export function createGraphController() {
     exitTheater: () => { if(theater) setTheater(null); },
     setCurrent,
     onStateChange(listener) { stateListeners.add(listener); return () => stateListeners.delete(listener); },
-    captureSettings: () => ({ axisMode, theme: presentation.getTheme() }),
+    captureSettings: () => ({ axisMode, theme: presentation.getTheme(), palette:presentation.getPalette() }),
     applySettings(settings) {
       axisMode = settings.axisMode;
       document.querySelectorAll('[data-axis]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.axis === axisMode));
       });
       presentation.setTheme(settings.theme);
+      presentation.setPalette(settings.palette??'default');
     },
     reservePointIds(savedFrames) {
       for (const frame of savedFrames) for (const point of frame.state.points) nextId = Math.max(nextId, point.id + 1);

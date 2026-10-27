@@ -125,7 +125,7 @@ import { CAL, MAX_I, MIN_EARTH, MAX_EARTH } from "../physics.js";
         paint-order="stroke" stroke="var(--plot)" stroke-width="4" class="svg-math">∣𝑩<tspan baseline-shift="sub" font-size="11.5">합</tspan><tspan baseline-shift="baseline">∣ = ${fmt(Math.hypot(earth, r), 3)}</tspan></text>
       <text x="${labelX}" y="${labelY}" text-anchor="middle" fill="var(--ink)" font-size="17"
         paint-order="stroke" stroke="var(--plot)" stroke-width="4" class="svg-math">𝜃 = ${fmt(theta(current))}°</text>
-      <text x="24" y="390" fill="var(--muted)" font-size="11">자기장 1단위 = ${fmt(scale, 1)} px</text>`;
+      <text data-export-ui x="24" y="390" fill="var(--muted)" font-size="11">자기장 1단위 = ${fmt(scale, 1)} px</text>`;
 
     if (oldFocus && !drag) {
       vectors.querySelector(`[data-handle="${oldFocus}"]`)?.focus({ preventScroll: true });

@@ -1,3 +1,4 @@
+import { PALETTE_NAMES } from '../palettes.js';
 import { validateFrames } from './model.js';
 
 export const PROJECT_FORMAT = 'compass-ammeter-project';
@@ -16,6 +17,8 @@ export function validateProject(value) {
       || !Number.isFinite(value.playhead) || value.playhead < 0 || value.playhead > 300) {
     throw Error('프로젝트 설정이 올바르지 않습니다.');
   }
+  const palette=s.palette??'default';
+  if(!Object.hasOwn(PALETTE_NAMES,palette))throw Error('지원하지 않는 색상 팔레트입니다.');
   const workspace=s.workspace??'graphs';
   if(!['graphs','coil'].includes(workspace)) throw Error('지원하지 않는 화면입니다.');
   const coil=s.coil??{showCurrent:true,showField:true,showCompass:true};
@@ -26,7 +29,7 @@ export function validateProject(value) {
     format: PROJECT_FORMAT, version: PROJECT_VERSION,
     name: String(value.name || '나침반 실험').trim().slice(0, 60) || '나침반 실험',
     state, frames, playhead: value.playhead,
-    settings: { axisMode: s.axisMode, theme: s.theme, easing: s.easing, loop: s.loop, workspace, layout:{panelClosed:layout.panelClosed,timelineHidden:layout.timelineHidden,presenting:layout.presenting}, coil: {showCurrent:coil.showCurrent,showField:coil.showField,showCompass:coil.showCompass} }
+    settings: { axisMode: s.axisMode, theme: s.theme, palette, easing: s.easing, loop: s.loop, workspace, layout:{panelClosed:layout.panelClosed,timelineHidden:layout.timelineHidden,presenting:layout.presenting}, coil: {showCurrent:coil.showCurrent,showField:coil.showField,showCompass:coil.showCompass} }
   };
 }
 

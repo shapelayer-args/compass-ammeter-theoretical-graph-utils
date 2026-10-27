@@ -1,9 +1,7 @@
+import { paletteFor } from '../palettes.js';
 import { encodeFrames, supportsFrameExport } from './frame-export.js';
 export function installExport({ api, $, stage, pause, message, seek, duration, clock, getFrames, getPlayhead, setPlayhead, getExporting, setExporting }) {
-  const PALETTES={
-    light:{bg:'#f3f2f5',surface:'#ffffff',plot:'#f6f5f8',ink:'#25232a',muted:'#74717d',line:'#e5e2e9',grid:'#e6e3eb',axis:'#b4afbd',curve:'#67508c',blue:'#556bba',green:'#348575',orange:'#c27543'},
-    dark:{bg:'#17161b',surface:'#222127',plot:'#29272f',ink:'#eeebf3',muted:'#b0aab9',line:'#3a3641',grid:'#39353f',axis:'#706879',curve:'#cbb0ef',blue:'#a5b5ff',green:'#81ccba',orange:'#f3b181'}
-  };
+  const exportPalette=theme=>paletteFor(document.documentElement.dataset.palette,theme);
   function exportOptions() {
     return {target:$('export-target').value,theme:$('export-theme').value==='current'?document.documentElement.dataset.theme:$('export-theme').value};
   }
@@ -12,29 +10,22 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
     source.removeAttribute('id');source.removeAttribute('class');source.removeAttribute('style');source.setAttribute('xmlns','http://www.w3.org/2000/svg');
     source.setAttribute('x',x);source.setAttribute('y',y);source.setAttribute('width',width);source.setAttribute('height',height);
     source.setAttribute('font-family','system-ui, -apple-system, sans-serif');
+    source.querySelectorAll('[data-handle], [data-export-ui], circle[fill="transparent"]').forEach(el=>el.remove());
     source.querySelectorAll('.svg-math').forEach(el=>el.setAttribute('font-family','STIX Two Math, Cambria Math, STIXGeneral, serif'));
     source.querySelectorAll('[tabindex]').forEach(el=>{el.removeAttribute('tabindex');el.removeAttribute('role');el.removeAttribute('style');});
     return new XMLSerializer().serializeToString(source).replace(/var\(--([a-z-]+)\)/g,(_,name)=>palette[name]||palette.ink);
   }
-  function composition(options,time=null) {
-    if(api.captureSettings().workspace==='coil') {
-      const width=1920,height=1080,p=PALETTES[options.theme]||PALETTES.light;
-      const image=api.renderScene(options.theme);
-      const stamp=time===null?'':`<text x="1880" y="52" text-anchor="end" fill="${p.muted}" font-size="20">${time.toFixed(2)} s</text>`;
-      return {width,height,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="${p.plot}"/><image href="${image}" x="0" y="80" width="1920" height="980" preserveAspectRatio="xMidYMid meet"/><text x="40" y="52" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="28">코일과 나침반</text>${stamp}</svg>`};
+  function composition(options) {
+    const coil=api.captureSettings().workspace==='coil';
+    const width=coil||options.target==='both'?1920:1600,height=1080,p=exportPalette(options.theme);
+    let body=`<rect width="100%" height="100%" fill="${p.plot}"/>`;
+    if(coil) {
+      body+=`<image href="${api.renderScene(options.theme)}" x="0" y="0" width="${width}" height="${height}"/>`;
+    } else {
+      const ids=options.target==='both'?['curve','vectors']:[options.target];
+      const boxWidth=width/ids.length;
+      ids.forEach((id,index)=>{body+=graphSvg(id,p,index*boxWidth,0,boxWidth,height);});
     }
-    const both=options.target==='both',width=both?1920:1600,height=1080,p=PALETTES[options.theme]||PALETTES.light;
-    const ids=both?['curve','vectors']:[options.target],gap=24,margin=36,boxWidth=(width-margin*2-gap*(ids.length-1))/ids.length;
-    let body=`<rect width="${width}" height="${height}" fill="${p.bg}"/><text x="${margin}" y="58" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="28" font-weight="650">나침반 전류계</text>`;
-    ids.forEach((id,index)=>{
-      const x=margin+index*(boxWidth+gap);
-      body+=`<rect x="${x}" y="88" width="${boxWidth}" height="846" rx="30" fill="${p.surface}"/><text x="${x+26}" y="133" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="23" font-weight="600">${id==='curve'?'전류와 편향각':'자기장의 합'}</text><rect x="${x+18}" y="158" width="${boxWidth-36}" height="748" rx="22" fill="${p.plot}"/>`;
-      body+=graphSvg(id,p,x+22,166,boxWidth-44,728);
-    });
-    const state=api.capture();
-    const labels=[`전류 𝐼  ${api.fmt(state.current)} mA`,`편향각 𝜃  ${api.fmt(api.theta())}°`,`∣𝑩<tspan baseline-shift="sub" font-size="17">합</tspan><tspan baseline-shift="baseline">∣ / 𝐵</tspan><tspan baseline-shift="sub" font-size="17">Earth</tspan><tspan baseline-shift="baseline">  ${api.fmt(api.magnitude(),3)}</tspan>`];
-    labels.forEach((text,index)=>{body+=`<text x="${margin+index*(width-margin*2)/3}" y="1004" fill="${p.ink}" font-family="system-ui, sans-serif" font-size="25">${text}</text>`;});
-    if(time!==null)body+=`<text x="${width-margin}" y="54" text-anchor="end" fill="${p.muted}" font-family="system-ui, sans-serif" font-size="20">${time.toFixed(2)} s</text>`;
     return {width,height,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`};
   }
   async function rasterize(ctx,svg,width,height) {
@@ -52,13 +43,9 @@ export function installExport({ api, $, stage, pause, message, seek, duration, c
       return;
     }
     // Keep video frames as pixels: no PNG encoding, SVG wrapping or image decode.
-    const p=PALETTES[options.theme]||PALETTES.light;
+    const p=exportPalette(options.theme);
     ctx.fillStyle=p.plot;ctx.fillRect(0,0,1920,1080);
-    ctx.drawImage(api.renderSceneCanvas(options.theme,offline?time:undefined),0,80,1920,980);
-    ctx.fillStyle=p.ink;ctx.font='28px system-ui, sans-serif';ctx.textAlign='left';
-    ctx.fillText('코일과 나침반',40,52);
-    ctx.fillStyle=p.muted;ctx.font='20px system-ui, sans-serif';ctx.textAlign='right';
-    ctx.fillText(`${time.toFixed(2)} s`,1880,52);ctx.textAlign='left';
+    ctx.drawImage(api.renderSceneCanvas(options.theme,offline?time:undefined),0,0,1920,1080);
   }
   let lastExportUrl = null;
   function download(blob,name) {

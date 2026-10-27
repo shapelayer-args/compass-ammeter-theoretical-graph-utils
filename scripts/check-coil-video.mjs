@@ -10,7 +10,7 @@ const $=id=> {
 let directFrames=0,copies=0,stopped=0,exporting=null,head=.5;
 const locks=[],seeks=[];
 const scene={kind:'coil pixels'};
-const ctx={fillRect(){},fillText(){},drawImage(image){assert.equal(image,scene);copies++;}};
+const ctx={fillRect(){},fillText(){throw Error('UI titles and timestamps must not be exported');},drawImage(image,...rect){assert.equal(image,scene);assert.deepEqual(rect,[0,0,1920,1080]);copies++;}};
 globalThis.HTMLCanvasElement=class {captureStream(){}};
 globalThis.Image=class {constructor(){throw Error('Video must not decode SVG/PNG images');}};
 globalThis.document={documentElement:{dataset:{theme:'dark'}},fonts:{ready:Promise.resolve()},
